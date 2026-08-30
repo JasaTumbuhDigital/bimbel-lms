@@ -1,0 +1,77 @@
+datasource db {
+    provider = "postgresql"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+enum UserRole {
+    student
+    tutor
+    admin
+}
+
+model User {
+    id        String   @id @default(uuid())
+    authId    String   @unique @map("auth_id")
+    name      String
+    email     String   @unique
+    phone     String?
+    role      UserRole
+    avatarUrl String?  @map("avatar_url")
+    isActive  Boolean  @default(true) @map("is_active")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    studentProfile StudentProfile?
+    tutorProfile   TutorProfile?
+    adminProfile   AdminProfile?
+
+    @@index([role])
+    @@map("users")
+}
+
+model StudentProfile {
+    id                 String   @id @default(uuid())
+    userId             String   @unique @map("user_id")
+    classLevelId       String   @map("class_level_id")
+    mustChangePassword Boolean  @default(true) @map("must_change_password")
+    createdAt          DateTime @default(now()) @map("created_at")
+
+    user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    classLevel ClassLevel @relation(fields: [classLevelId], references: [id], onDelete: Restrict)
+
+    @@index([classLevelId])
+    @@map("student_profiles")
+}
+
+model TutorProfile {
+    id     String  @id @default(uuid())
+    userId String  @unique @map("user_id")
+    bio    String?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("tutor_profiles")
+}
+
+model AdminProfile {
+    id     String @id @default(uuid())
+    userId String @unique @map("user_id")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("admin_profiles")
+}
+
+model ClassLevel {
+    id          String   @id @default(uuid())
+    name        String   @unique
+    description String?
+    isDefault   Boolean  @default(false) @map("is_default")
+    createdAt   DateTime @default(now()) @map("created_at")
+
+    studentProfiles StudentProfile[]
+
+    @@map("class_levels")
+}

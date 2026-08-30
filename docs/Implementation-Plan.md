@@ -1,0 +1,273 @@
+# Implementation Plan
+## LMS Bimbel Template — [Nama Produk]
+
+**Versi:** 2.2
+**Tanggal:** 25 Agustus 2026
+**Terkait dokumen:** PRD.md (v2.0), SDD.md (v1.1)
+**Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
+
+> **Ringkasan perubahan v2.2:** Fase 1 & Fase 2 disesuaikan mengikuti SDD v1.1 — relasi kelas↔kursus jadi many-to-many + flag eksplisit, kepemilikan kursus oleh tutor jadi many-to-many (co-teaching), plus scoping akses tutor terbatas ke kursus miliknya (FR-40, FR-41 baru di PRD).
+>
+> **Ringkasan perubahan v2.1:** Dokumen ini dipangkas jadi **roadmap fase & checklist kerja**, bukan lagi tempat menjelaskan alasan/detail teknis — itu sekarang tinggal di **SDD.md** (arsitektur, data model, keputusan desain) dan akan dilengkapi **TSD per fitur** (spesifikasi teknis detail tiap modul). Skema database di Fase 1 disesuaikan mengikuti keputusan SDD §3.1 (satu tabel `users` + role, bukan tabel terpisah penuh per role).
+>
+> **Ringkasan perubahan v2.0:** Arsitektur multi-tenant dihapus. Setiap klien = 1 instance terpisah penuh (deployment & database sendiri). Fokus development berubah dari "bangun 1 sistem final" menjadi "bangun 1 codebase master yang mudah dikonfigurasi & direplikasi cepat per klien".
+
+---
+
+## 1. Tech Stack Ringkas
+
+| Layer | Teknologi |
+|---|---|
+| Framework | Next.js (App Router, TypeScript) |
+| Auth + DB + Storage | Supabase (Postgres, Auth, Storage, RLS) — 1 project Supabase per klien |
+| ORM | Prisma |
+| UI | Tailwind CSS + shadcn/ui |
+| Form & Validasi | React Hook Form + Zod |
+| Video | YouTube (unlisted, embed iframe biasa di T1) |
+| Video progress tracking *(Tier 2)* | react-youtube (IFrame API) |
+| Sertifikat *(Tier 2)* | @react-pdf/renderer |
+| Pembayaran *(Tier 2)* | Midtrans / Xendit |
+| Notifikasi WA *(Tier 2)* | Fonnte / Wablas |
+| Server State | TanStack Query |
+| Deploy | Vercel — 1 project Vercel per klien |
+
+---
+
+## 2. Prinsip Arsitektur (Ringkas — Detail & Alasan di SDD §1.4, §7)
+
+3 prinsip wajib dipegang sejak Fase 1, karena model bisnisnya "1 klien = 1 deployment terpisah":
+
+1. **Config-driven branding** — `config/institution.ts` + `.env` per klien, bukan hardcoded di komponen
+2. **Modular per fitur** — modul Tier 2 bisa "dimatikan" via feature flag tanpa merusak Tier 1 (lihat SDD §5.1)
+3. **Versioning & tagging rapi** — Git tag jelas per rilis (`v1.0-tier1`, `v1.1-tier2-payment`) untuk tracking versi per klien
+
+---
+
+## 3. Fase Pengerjaan
+
+### Fase 0 — Persiapan
+**Tujuan:** Menyelesaikan keputusan dasar sebelum coding supaya fondasi config-driven benar dari awal.
+
+- [ ] Finalisasi daftar field yang perlu configurable per klien (nama institusi, logo, warna primer/sekunder, alamat, kontak WA, teks hero, dst) — jadi acuan struktur `config/institution.ts`
+- [ ] Siapkan template kontrak sederhana (scope project, harga, durasi maintenance retainer, kejelasan kepemilikan source code & infrastruktur) — lihat PRD Open Items §7.4
+- [ ] Setup project management sederhana (Trello/Linear/Notion) untuk tracking
+
+**Output:** Struktur config final disepakati, siap jadi acuan development.
+
+---
+
+### Fase 1 — Setup Fondasi Project (Codebase Master)
+**Tujuan:** Environment siap, arsitektur dasar berdiri, mudah direplikasi.
+
+1. **Inisialisasi project**
+   - `create-next-app` (TypeScript + App Router + Tailwind), ESLint + Prettier
+   - Struktur folder (lihat §5)
+2. **Config-driven branding**
+   - `config/institution.ts` (nama, logo, warna, kontak, teks hero) + `.env.example`
+   - Dokumentasikan di README field apa saja yang wajib diganti per klien baru
+3. **Setup Supabase (project pertama, jadi acuan/template)**
+   - Skema database sesuai SDD §3.2: `users` (1 tabel + kolom `role`) → `student_profiles`/`tutor_profiles`/`admin_profiles`, `class_levels`, `courses` (+ flag `visible_to_all_levels`), pivot `course_class_levels` (many-to-many kelas↔kursus) & `course_tutors` (many-to-many tutor↔kursus), `modules`, `lessons`, `enrollments`, `lesson_progress`, `quizzes` + turunannya, `wishlists`, `reviews`
+   - Setup Prisma, generate schema pertama
+   - Aktifkan RLS dasar per role (lihat SDD §8 — checklist detail policy per tabel disusun di TSD)
+4. **Setup Auth**
+   - Integrasi Supabase Auth (`@supabase/ssr`) + Middleware role-based access
+   - Alur admin-created account (FR-2): lihat flow lengkap di SDD §6.1
+   - **Tidak** ada halaman "Daftar" publik di Tier 1 (baru di Fase 8)
+5. **Setup UI foundation**
+   - shadcn/ui + Tailwind, warna default dari `config/institution.ts`
+   - Layout dasar: `(public)`, `(auth)`, `(student)`, `(admin)`
+6. **Setup deploy pipeline (template)**
+   - Hubungkan repo GitHub ke Vercel
+   - Dokumentasikan langkah deploy ulang untuk klien baru (project Supabase baru → `.env` baru → project Vercel baru → deploy)
+
+**Output:** Project jalan lokal & ter-deploy skeleton ke Vercel, auth admin-created account jalan, proses ganti branding sudah teruji minimal 1x.
+
+**Terkait FR:** FR-1, FR-2, FR-4, FR-5, FR-6
+
+---
+
+### Fase 1b — Manajemen Kelas/Tingkatan
+**Tujuan:** Fondasi struktural, dibangun sebelum modul kursus (alasan: PRD §5.1a, desain: SDD §3.3).
+
+- [ ] Admin: CRUD kategori kelas/tingkatan (soft-delete jika masih ada siswa aktif)
+- [ ] Logic penetapan tingkatan default saat akun siswa dibuat
+- [ ] Admin/tutor: UI pindahkan siswa antar tingkatan (dropdown sederhana)
+- [ ] Helper/query filter akses berbasis tingkatan (many-to-many + flag `visible_to_all_levels`, dipakai ulang di Fase 2+) — pattern: SDD §5 (Class Level Module), §7.6
+
+**Output:** Sistem tingkatan siap jadi fondasi filter akses kursus.
+
+**Terkait:** FR-36, FR-37, FR-38 · SDD §3.2, §3.3, §6.2
+
+---
+
+### Fase 2 — Modul Kursus & Materi
+**Tujuan:** Siswa bisa lihat kursus sesuai tingkatannya, pelajari materi, tandai progress. Flow lengkap: SDD §6.2.
+
+- [ ] Skema & CRUD: courses (pilih 1/beberapa/semua tingkatan via `course_class_levels` + flag) → modules → lessons (video/dokumen)
+- [ ] Admin: assign/unassign satu atau lebih tutor pengampu per kursus (`course_tutors`) — FR-40
+- [ ] Siswa: listing kursus terfilter tingkatan, detail kursus + struktur modul
+- [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`) — FR-41
+- [ ] Video: embed YouTube unlisted (player biasa, **tanpa** tracking otomatis di T1)
+- [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`)
+- [ ] Preview dokumen (PDF/PPT) langsung di browser
+
+**Output:** Siswa belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor hanya lihat kursus miliknya.
+
+**Terkait:** FR-7, FR-8, FR-9, FR-10, FR-40, FR-41 · SDD §6.2
+
+---
+
+### Fase 3 — Kuis
+**Tujuan:** Siswa uji pemahaman dengan penilaian otomatis. Flow lengkap: SDD §6.3.
+
+- [ ] Skema & builder kuis pilihan ganda (admin/tutor)
+- [ ] Siswa: kerjakan kuis, submit, lihat skor
+- [ ] Riwayat percobaan kuis (skor final = tertinggi, default per FR-12)
+
+**Output:** Modul kuis end-to-end.
+
+**Terkait:** FR-11, FR-12 · SDD §6.3
+
+---
+
+### Fase 4 — Dashboard Siswa Lengkap (Wishlist & Reviews)
+- [ ] Dashboard real-time: enrolled/aktif/selesai
+- [ ] Wishlist: simpan/hapus kursus
+- [ ] Reviews: rating & ulasan kursus yang sudah diikuti
+
+**Terkait:** FR-14, FR-15, FR-16
+
+---
+
+### Fase 5 — Dashboard Admin & Manajemen Akun Manual
+- [ ] Dashboard ringkas: total siswa, kursus, kelas berjalan
+- [ ] CRUD user (siswa/tutor), termasuk alur create akun manual dari Fase 1
+- [ ] CRUD kursus/modul/lesson (lengkapi dari Fase 2 jika perlu)
+
+**Terkait:** FR-29, FR-30, FR-31
+
+---
+
+### Fase 6 — Landing Page & Blog
+- [ ] Landing page: hero, statistik, listing kursus + filter kategori, testimoni — full config-driven
+- [ ] `next/image` + `generateMetadata` untuk SEO dasar
+- [ ] Blog/artikel: mulai dari MDX statis + SEO metadata dasar
+
+**Terkait:** FR-34, FR-35
+
+---
+
+### Fase 7 — QA, Dokumentasi Serah Terima & Paket Replikasi
+- [ ] QA menyeluruh per role (siswa, admin) mengikuti user stories Tier 1 di PRD
+- [ ] **Uji replikasi**: simulasi klien baru — ganti config penuh + deploy ke project Supabase/Vercel baru dari nol, catat durasi & yang masih ketinggalan hardcoded
+- [ ] Dokumentasi serah terima: panduan penggunaan, dokumentasi teknis, kejelasan kepemilikan source code/infrastruktur (sesuai kontrak Fase 0)
+- [ ] Checklist keamanan dasar: RLS aktif & benar per role, tidak ada credential hardcoded
+
+**Output:** Template Tier 1 siap dijual — proses replikasi teruji & terdokumentasi.
+
+---
+
+## 4. Fase Lanjutan — Tier 2 (Dikerjakan Setelah Tier 1 Terjual/Tervalidasi)
+
+Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, diaktifkan lewat feature flag config saat klien upgrade ke Tier 2.
+
+### Fase 8 — Registrasi Mandiri & Pembayaran
+- Halaman "Daftar" publik + pemilihan kursus (menggantikan alur admin-only untuk klien Tier 2)
+- Integrasi payment gateway (Midtrans/Xendit): checkout, webhook handler (API Route), auto-enroll setelah pembayaran terverifikasi
+- Dashboard admin: verifikasi & tracking pembayaran
+
+**Terkait FR:** FR-3, FR-24, FR-25, FR-26
+
+### Fase 8b — Progress Tracking Otomatis (Video)
+- Integrasi `react-youtube` (IFrame API) menggantikan player biasa dari Fase 2
+- Player custom + progress bar berbasis durasi tonton aktual, auto-save progress (debounce, Server Action)
+- Auto mark selesai otomatis di ≥90% durasi, menggantikan tombol manual "Tandai Selesai" (data lama dari Tier 1 tetap kompatibel karena struktur tabel `lesson_progress` sama, hanya cara pengisian yang berubah)
+
+**Terkait FR:** FR-39
+
+### Fase 9 — Portal Orang Tua
+- Penautan akun orang tua ↔ siswa (1 → banyak)
+- Portal: progress belajar, kehadiran, riwayat pembayaran anak
+
+**Terkait FR:** FR-18, FR-19, FR-20
+
+### Fase 10 — Live Class & Kehadiran
+- Jadwal live class + link Zoom/Meet
+- Notifikasi WA (Fonnte/Wablas) sebelum kelas
+- Presensi per sesi oleh tutor
+
+**Terkait FR:** FR-21, FR-22, FR-23
+
+### Fase 11 — Konten & Interaksi Lanjutan
+- Sertifikat otomatis (@react-pdf/renderer)
+- Forum Q&A per kursus
+- Kuis dengan timer & pembahasan otomatis
+
+**Terkait FR:** FR-13, FR-27, FR-28
+
+### Fase 12 — Analytics & Gamifikasi
+- Dashboard admin: revenue tracking, laporan bisnis
+- Dashboard tutor: analytics progress siswa
+- Leaderboard/badge
+
+**Terkait FR:** FR-32, FR-33, FR-17
+
+---
+
+## 5. Struktur Folder (Referensi Awal)
+
+```
+app/
+  (public)/                # landing page, blog, listing kursus publik
+    page.tsx
+    courses/
+    blog/
+  (auth)/
+    login/
+    register/               # dibangun aktif hanya untuk instance Tier 2
+  (student)/
+    dashboard/
+    courses/[id]/
+    quiz/[id]/
+    wishlist/
+  (admin)/
+    dashboard/
+    users/                   # termasuk fitur create akun manual (Tier 1)
+    class-levels/            # CRUD kelas/tingkatan (Tier 1)
+    courses/
+    orders/                  # aktif untuk instance Tier 2
+  api/
+    webhook/payment/         # aktif untuk instance Tier 2
+config/
+  institution.ts             # branding & konten config-driven
+  features.ts                 # feature flag per tier
+components/
+  ui/                        # shadcn components
+  shared/
+lib/
+  supabase/
+  prisma/
+  validations/                # Zod schemas
+prisma/
+  schema.prisma
+middleware.ts
+```
+
+---
+
+## 6. Risiko & Mitigasi
+
+| Risiko | Mitigasi |
+|---|---|
+| Belum pernah pakai Next.js — potensi lambat di fase awal | Alokasikan waktu belajar eksplisit di Fase 1, jangan gabung dengan target fitur |
+| Config-driven branding kurang menyeluruh (masih ada yang hardcoded), bikin replikasi ke klien baru jadi lambat/error | Wajibkan langkah "Uji Replikasi" di Fase 7 sebelum dianggap siap jual — jangan asumsikan config sudah lengkap tanpa dites end-to-end |
+| Scoping akses tutor (hanya lihat kursus miliknya) lupa diterapkan di salah satu halaman/dashboard baru | Pusatkan logic scoping di satu module (`course_tutors` + RLS, lihat SDD §5, §7.7), jangan tulis filter manual berulang di tiap halaman tutor |
+| YouTube unlisted video berpotensi di-download/dibagikan siswa | Diterima sebagai trade-off sadar untuk Tier 1 (biaya rendah); tawarkan Bunny.net/Mux sebagai opsi custom jika klien spesifik minta proteksi lebih |
+| Free tier Supabase/Vercel per klien terlampaui saat instance klien bertambah besar | Pantau usage tiap instance secara berkala; ini jadi bagian natural dari percakapan upgrade/maintenance dengan klien, bukan ditanggung sepihak oleh kamu |
+| Scope creep saat demo ke calon klien (klien minta fitur di luar Tier 1/2 sebelum deal jelas) | Gunakan PRD §7.3 (Out of Scope) sebagai acuan tegas saat sales — fitur di luar itu = custom quote terpisah, didiskusikan setelah deal dasar disepakati |
+| Kesulitan tracking versi codebase yang sudah di-deploy ke tiap klien saat butuh maintenance | Disiplin Git tag/branch per rilis (lihat §2 poin 3) sejak awal, jangan ditunda sampai klien pertama masuk |
+| Data progress manual (Tier 1) dianggap kurang objektif oleh sebagian klien | Terima sebagai batasan sadar Tier 1, jadikan progress otomatis (FR-39) sebagai salah satu alasan konkret upgrade ke Tier 2, bukan sesuatu yang perlu "diperbaiki" di Tier 1 |
+
+---
+
+*Dokumen ini adalah roadmap fase & checklist kerja — ringkas secara sengaja. Detail arsitektur & alasan keputusan teknis ada di SDD.md; spesifikasi detail tiap fitur (request/response, validasi, dsb) akan disusun sebagai TSD terpisah per fitur. Perubahan scope di PRD atau keputusan arsitektur di SDD harus tercermin di rencana fase ini.*
