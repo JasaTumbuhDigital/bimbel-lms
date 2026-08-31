@@ -1,11 +1,13 @@
 # Product Requirements Document (PRD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.0
+**Versi:** 2.2
 **Tanggal:** 25 Agustus 2026
 **Status:** Draft
 **Owner:** [Nama kamu]
 
+> **Ringkasan perubahan v2.2:** FR-38 diubah dari single tingkatan (nullable) jadi many-to-many + flag eksplisit `visible_to_all_levels`; kepemilikan kursus oleh tutor jadi many-to-many (co-teaching, FR-40); scoping akses tutor dipertegas (FR-41). FR-10 (dokumen PDF/PPT + preview) sempat dipertimbangkan pindah ke Tier 2, tapi **dikonfirmasi tetap di Tier 1** dengan skema Google Docs Viewer — library rendering khusus dicatat sebagai opsi upgrade custom quote, bukan default.
+>
 > **Ringkasan perubahan dari v1.0:** Produk direposisi dari "rebuild khusus untuk Zest College" menjadi **template LMS yang dijual berkali-kali sebagai project** ke berbagai institusi bimbel berbeda. Model bisnis: jual project (one-time, kepemilikan pindah ke klien) + opsional retainer maintenance — **bukan** SaaS subscription multi-tenant. Setiap klien mendapat deployment & database sendiri-sendiri (single-tenant per instance), bukan berbagi satu sistem.
 
 ---
@@ -175,6 +177,7 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-39 (P1, T2):** Sistem harus melacak progress tonton video secara **otomatis** berdasarkan durasi aktual yang ditonton siswa (via YouTube IFrame API), dan menandai materi "selesai" otomatis jika ≥90% durasi ditonton — menggantikan penandaan manual di FR-9 sebagai opsi yang lebih terverifikasi untuk institusi yang butuh data progress lebih akurat (misal untuk laporan ke orang tua).
   - Edge case: progress tersimpan otomatis secara berkala (auto-save), bukan hanya saat video selesai — mengantisipasi siswa menutup browser mendadak.
 - **FR-10 (P1, T1):** Sistem harus mendukung upload dokumen materi (PDF, PPT) dengan preview langsung di browser tanpa perlu download.
+  - Catatan implementasi: skema awal pakai Google Docs Viewer untuk preview PPT/PPTX (lihat TSD Course & Content Module §6.4). Jika ada klien yang butuh pendekatan lain (misal keberatan file dikirim ke pihak ketiga untuk preview), evaluasi library rendering khusus (`@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, `pptx-glimpse`) sebagai custom quote — bukan bagian template standar.
 
 ### 5.3 Kuis
 - **FR-11 (P0, T1):** Tutor harus bisa membuat kuis pilihan ganda dengan penilaian otomatis.

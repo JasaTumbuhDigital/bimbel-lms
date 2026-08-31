@@ -1,11 +1,13 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.2
+**Versi:** 2.3
 **Tanggal:** 25 Agustus 2026
-**Terkait dokumen:** PRD.md (v2.0), SDD.md (v1.1)
+**Terkait dokumen:** PRD.md (v2.2), SDD.md (v1.1)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.3:** FR-10 (lesson tipe dokumen PDF/PPT + preview) dikonfirmasi **tetap di Fase 2/Tier 1** (Google Docs Viewer sebagai skema awal) — sempat dipertimbangkan pindah ke Tier 2 tapi dibatalkan. Library rendering khusus dicatat sebagai opsi upgrade opsional di Fase 11, bukan fitur terpisah.
+>
 > **Ringkasan perubahan v2.2:** Fase 1 & Fase 2 disesuaikan mengikuti SDD v1.1 — relasi kelas↔kursus jadi many-to-many + flag eksplisit, kepemilikan kursus oleh tutor jadi many-to-many (co-teaching), plus scoping akses tutor terbatas ke kursus miliknya (FR-40, FR-41 baru di PRD).
 >
 > **Ringkasan perubahan v2.1:** Dokumen ini dipangkas jadi **roadmap fase & checklist kerja**, bukan lagi tempat menjelaskan alasan/detail teknis — itu sekarang tinggal di **SDD.md** (arsitektur, data model, keputusan desain) dan akan dilengkapi **TSD per fitur** (spesifikasi teknis detail tiap modul). Skema database di Fase 1 disesuaikan mengikuti keputusan SDD §3.1 (satu tabel `users` + role, bukan tabel terpisah penuh per role).
@@ -105,15 +107,16 @@
 
 - [ ] Skema & CRUD: courses (pilih 1/beberapa/semua tingkatan via `course_class_levels` + flag) → modules → lessons (video/dokumen)
 - [ ] Admin: assign/unassign satu atau lebih tutor pengampu per kursus (`course_tutors`) — FR-40
-- [ ] Siswa: listing kursus terfilter tingkatan, detail kursus + struktur modul
+- [ ] Siswa: listing kursus terfilter tingkatan; detail kursus tampil sebagai preview (struktur modul terlihat, konten terkunci) sebelum klik "Enroll"
+- [ ] Tombol "Enroll" eksplisit di halaman detail kursus (bukan auto-enroll diam-diam) — buka akses penuh ke konten setelah diklik
 - [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`) — FR-41
 - [ ] Video: embed YouTube unlisted (player biasa, **tanpa** tracking otomatis di T1)
-- [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`)
-- [ ] Preview dokumen (PDF/PPT) langsung di browser
+- [ ] Dokumen: upload PDF/PPT ke Supabase Storage + preview di browser (PDF native, PPT/PPTX via Google Docs Viewer)
+- [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`, hanya untuk siswa yang sudah enroll)
 
-**Output:** Siswa belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor hanya lihat kursus miliknya.
+**Output:** Siswa jelajahi & enroll kursus secara sadar, belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor hanya lihat kursus miliknya.
 
-**Terkait:** FR-7, FR-8, FR-9, FR-10, FR-40, FR-41 · SDD §6.2
+**Terkait:** FR-7, FR-8, FR-9, FR-10, FR-40, FR-41 · SDD §6.2 · TSD-Course-Content.md
 
 ---
 
@@ -202,6 +205,7 @@ Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, d
 - Sertifikat otomatis (@react-pdf/renderer)
 - Forum Q&A per kursus
 - Kuis dengan timer & pembahasan otomatis
+- *(Opsional, jika ada permintaan klien)* Upgrade preview dokumen dari Google Docs Viewer ke library khusus — `@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, atau `pptx-glimpse` — evaluasi saat kebutuhan itu muncul, bukan default
 
 **Terkait FR:** FR-13, FR-27, FR-28
 
