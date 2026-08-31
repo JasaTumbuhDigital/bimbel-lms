@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getClassLevels } from "@/lib/actions/class-level";
+import { getClassLevels } from "@/lib/data/class-level";
 import CreateStudentForm from "@/components/admin/CreateStudentForm";
 
 export default async function NewStudentPage() {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { createStudentAction, type ActionResult } from "@/lib/actions/auth";
+import { createStudentAction } from "@/lib/actions/auth";
+import { ActionResult } from "@/types/action";
 
 type ClassLevelOption = {
     id: string;

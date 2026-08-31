@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { createClassLevelAction, type ActionResult } from "@/lib/actions/class-level";
+import { createClassLevelAction } from "@/lib/actions/class-level";
+import { ActionResult } from "@/types/action";
 
 export default function CreateClassLevelForm() {
   const [state, formAction, isPending] = useActionState<ActionResult, FormData>(

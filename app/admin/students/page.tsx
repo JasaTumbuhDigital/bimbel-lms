@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { getStudents } from "@/lib/actions/auth";
-import { getClassLevels } from "@/lib/actions/class-level";
+import { getStudents } from "@/lib/data/auth";
+import { getClassLevels } from "@/lib/data/class-level";
 import StudentRowActions from "@/components/admin/StudentRowActions";
 
 export default async function StudentsPage() {

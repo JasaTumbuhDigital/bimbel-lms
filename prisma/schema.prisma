@@ -38,8 +38,10 @@ model StudentProfile {
     mustChangePassword Boolean  @default(true) @map("must_change_password")
     createdAt          DateTime @default(now()) @map("created_at")
 
-    user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-    classLevel ClassLevel @relation(fields: [classLevelId], references: [id], onDelete: Restrict)
+    user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    classLevel       ClassLevel       @relation(fields: [classLevelId], references: [id], onDelete: Restrict)
+    enrollments      Enrollment[]
+    lessonProgresses LessonProgress[]
 
     @@index([classLevelId])
     @@map("student_profiles")
@@ -50,7 +52,8 @@ model TutorProfile {
     userId String  @unique @map("user_id")
     bio    String?
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    courseTutors CourseTutor[]
 
     @@map("tutor_profiles")
 }
@@ -71,7 +74,105 @@ model ClassLevel {
     isDefault   Boolean  @default(false) @map("is_default")
     createdAt   DateTime @default(now()) @map("created_at")
 
-    studentProfiles StudentProfile[]
+    studentProfiles   StudentProfile[]
+    courseClassLevels CourseClassLevel[]
 
     @@map("class_levels")
+}
+
+model Course {
+    id                 String             @id @default(uuid())
+    title              String
+    description        String?
+    thumbnailUrl       String?            @map("thumbnail_url")
+    visibleToAllLevels Boolean            @default(false) @map("visible_to_all_levels")
+    createdBy          String             @map("created_by") // user.id pembuat (admin / tutor)
+    isPublished        Boolean            @default(false) @map("is_published")
+    isArchived         Boolean            @default(false) @map("is_archived")
+    createdAt          DateTime           @default(now()) @map("created_at")
+    updatedAt          DateTime           @updatedAt @map("updated_at")
+    modules            Module[]
+    classLevels        CourseClassLevel[]
+    tutors             CourseTutor[]
+    enrollments        Enrollment[]
+
+    @@map("courses")
+}
+
+model CourseClassLevel {
+    id           String     @id @default(uuid())
+    courseId     String     @map("course_id")
+    classLevelId String     @map("class_level_id")
+    course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    classLevel   ClassLevel @relation(fields: [classLevelId], references: [id], onDelete: Cascade)
+
+    @@unique([courseId, classLevelId])
+    @@map("course_class_levels")
+}
+
+model CourseTutor {
+    id             String       @id @default(uuid())
+    courseId       String       @map("course_id")
+    tutorProfileId String       @map("tutor_profile_id")
+    assignedAt     DateTime     @default(now()) @map("assigned_at")
+    course         Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    tutorProfile   TutorProfile @relation(fields: [tutorProfileId], references: [id], onDelete: Cascade)
+
+    @@unique([courseId, tutorProfileId])
+    @@map("course_tutors")
+}
+
+model Module {
+    id        String   @id @default(uuid())
+    courseId  String   @map("course_id")
+    title     String
+    sortOrder Int      @default(0) @map("sort_order")
+    course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    lessons   Lesson[]
+
+    @@map("modules")
+}
+
+enum LessonContentType {
+    video
+    document
+}
+
+model Lesson {
+    id          String            @id @default(uuid())
+    moduleId    String            @map("module_id")
+    title       String
+    contentType LessonContentType @map("content_type")
+    videoUrl    String?           @map("video_url")
+    documentUrl String?           @map("document_url")
+    sortOrder   Int               @default(0) @map("sort_order")
+    module      Module            @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+    progress    LessonProgress[]
+
+    @@map("lessons")
+}
+
+model Enrollment {
+    id         String         @id @default(uuid())
+    studentId  String         @map("student_id") // student_profiles.id
+    courseId   String         @map("course_id")
+    enrolledAt DateTime       @default(now()) @map("enrolled_at")
+    student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    course     Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+    @@unique([studentId, courseId])
+    @@map("enrollments")
+}
+
+model LessonProgress {
+    id          String         @id @default(uuid())
+    studentId   String         @map("student_id")
+    lessonId    String         @map("lesson_id")
+    isCompleted Boolean        @default(false) @map("is_completed")
+    completedAt DateTime?      @map("completed_at")
+    student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    lesson      Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+    @@unique([studentId, lessonId])
+    @@map("lesson_progress")
 }

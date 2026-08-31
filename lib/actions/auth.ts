@@ -11,13 +11,7 @@ import {
 } from "@/lib/validations/auth";
 import { redirect } from "next/navigation";
 
-export type ActionResult<T = unknown> = {
-    success: boolean;
-    message?: string;
-    error?: string;
-    fieldErrors?: Record<string, string[]>;
-    data?: T;
-};
+import { ActionResult } from "@/types/action";
 
 /**
  * 1. Action Login Pengguna (Semua Role)
@@ -240,27 +234,6 @@ export async function createStudentAction(
     }
 }
 
-/**
- * 5. Fetch Seluruh Daftar Siswa (Admin Only)
- */
-export async function getStudents() {
-    try {
-        const students = await prisma.user.findMany({
-            where: { role: "student" },
-            orderBy: { createdAt: "desc" },
-            include: {
-                studentProfile: {
-                    include: {
-                        classLevel: true,
-                    },
-                },
-            },
-        });
-        return students;
-    } catch (error) {
-        return [];
-    }
-}
 
 /**
  * 6. Action Pindahkan Siswa ke Tingkatan Kelas Lain

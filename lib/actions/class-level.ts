@@ -5,54 +5,10 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { classLevelSchema } from "@/lib/validations/class-level";
 
-export type ActionResult<T = unknown> = {
-    success: boolean;
-    message?: string;
-    error?: string;
-    fieldErrors?: Record<string, string[]>;
-    data?: T;
-};
+import { checkAdminPermission } from "@/lib/data/auth";
+import { ActionResult } from "@/types/action";
 
-/**
- * Helper internal untuk mengamankan bahwa pemanggil action adalah Admin
- */
-async function checkAdminPermission() {
-    const supabase = await createClient();
-    const {
-        data: { user: authUser },
-    } = await supabase.auth.getUser();
 
-    if (!authUser) return null;
-
-    const dbUser = await prisma.user.findUnique({
-        where: { authId: authUser.id },
-    });
-
-    if (!dbUser || !dbUser.isActive || dbUser.role !== "admin") {
-        return null;
-    }
-
-    return dbUser;
-}
-
-/**
- * 1. Fetch Seluruh Daftar Tingkatan Kelas (beserta jumlah siswa)
- */
-export async function getClassLevels() {
-    try {
-        const classLevels = await prisma.classLevel.findMany({
-            orderBy: { createdAt: "asc" },
-            include: {
-                _count: {
-                    select: { studentProfiles: true },
-                },
-            },
-        });
-        return classLevels;
-    } catch (error) {
-        return [];
-    }
-}
 
 /**
  * 2. Action Tambah Tingkatan Kelas Baru

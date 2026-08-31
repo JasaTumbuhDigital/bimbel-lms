@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getClassLevels } from "@/lib/actions/class-level";
+import { getClassLevels } from "@/lib/data/class-level";
 import CreateClassLevelForm from "@/components/admin/CreateClassLevelForm";
 import DeleteClassLevelButton from "@/components/admin/DeleteClassLevelButton";
 
