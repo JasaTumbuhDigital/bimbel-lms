@@ -27,7 +27,7 @@ Spesifikasi siap-coding untuk modul inti belajar: pembuatan & pengelolaan kursus
 | FR-10 | Upload & preview dokumen (PDF/PPT) di browser |
 | FR-38 | Relasi many-to-many kursus↔tingkatan + flag `visible_to_all_levels`, validasi saat publish |
 | FR-40 | Admin assign/unassign tutor ke kursus (many-to-many) |
-| FR-41 | Scoping akses data tutor — hanya kursus yang dia ampu |
+| FR-41 | Tutor melihat seluruh kursus, namun hak edit (CRUD modul/materi) hanya untuk kursus yang diampu |
 
 ### 1.3 Dependency
 Modul ini **bergantung penuh** pada TSD-Auth-ClassLevel.md — khususnya helper `getAccessibleCourseFilter` (§5.4 di dokumen tersebut) yang diimplementasikan penuh di sini, dan skema `users`/`student_profiles`/`class_levels` yang sudah ada.
@@ -169,16 +169,8 @@ model LessonProgress {
 -- SELECT
 CREATE POLICY courses_select ON courses FOR SELECT
 USING (
-  -- Admin: lihat semua (termasuk draft & archived, untuk keperluan manajemen)
-  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
-  OR
-  -- Tutor: lihat kursus yang dia ampu (draft maupun published, untuk keperluan edit)
-  EXISTS (
-    SELECT 1 FROM course_tutors ct
-    JOIN tutor_profiles tp ON tp.id = ct.tutor_profile_id
-    JOIN users u ON u.id = tp.user_id
-    WHERE ct.course_id = courses.id AND u.auth_id = auth.uid()
-  )
+  -- Admin & Tutor: lihat semua (termasuk draft & archived, untuk keperluan manajemen/eksplorasi)
+  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('admin', 'tutor'))
   OR
   -- Siswa: hanya kursus published, DAN (visible_to_all_levels ATAU cocok tingkatan ATAU sudah pernah enrolled)
   (
@@ -295,7 +287,7 @@ USING (
 const createCourseSchema = z.object({
   title: z.string().min(3).max(150),
   description: z.string().max(1000).optional(),
-  thumbnailUrl: z.string().url().optional(),
+  thumbnailUrl: z.string().optional(), // diisi dari hasil upload thumbnail ke Storage, bukan diketik manual
 });
 ```
 
@@ -375,7 +367,7 @@ const assignClassLevelsSchema = z.object({
 2. Replace strategy: hapus semua row `course_class_levels` existing untuk `courseId`, lalu insert ulang sesuai `classLevelIds` yang baru (lebih sederhana daripada diff manual, dan volume data per kursus kecil sehingga tidak masalah performa)
 3. Update `courses.visibleToAllLevels`
 
-### 4.6 `deleteCourse` (Soft-delete)
+### 4.6 `archiveCourseAction` (Soft-delete / Arsip)
 
 **FR terkait:** A3 (keputusan §1.4)
 
@@ -383,6 +375,7 @@ const assignClassLevelsSchema = z.object({
 1. Hanya admin
 2. Set `isArchived = true` (bukan hard delete)
 3. Kursus otomatis hilang dari semua listing (query listing selalu filter `isArchived = false`, lihat §5)
+4. Relasi seperti `lesson_progress` dan `enrollments` tetap utuh, sehingga riwayat siswa tidak rusak.
 
 ---
 
@@ -499,8 +492,8 @@ async function getCourseListForTutor(tutorProfileId: string) {
   return prisma.course.findMany({
     where: {
       isArchived: false,
-      tutors: { some: { tutorProfileId } }, // scoping inti — TIDAK ada exception role check tambahan,
-                                              // tutor TIDAK PERNAH melihat kursus di luar ini walau lewat query manapun
+      // Tutor dapat melihat semua list kursus, jadi filter berdasarkan tutorProfileId dihilangkan.
+      // (FR-41 yang baru)
     },
     include: { modules: true },
   });
@@ -582,17 +575,23 @@ Sistem **tidak** memanggil YouTube Data API untuk verifikasi video benar-benar a
 
 **Permission check:** sama seperti §6.1, tapi resolve `courseId` dari `moduleId` dulu (`module.courseId`).
 
-### 6.3 `uploadDocument`
+### 6.3 Upload File (Thumbnail & Dokumen)
 
 **FR terkait:** FR-10
 
-**Input:** `FormData` (file) + `courseId` (untuk penentuan path storage)
+**Keputusan Arsitektur Pengunggahan:**
+Untuk menghindari batasan ukuran *payload* Server Actions bawaan Next.js (umumnya maksimal 4.5MB di lingkungan *serverless/Vercel*), pengunggahan file fisik dilakukan **langsung dari Client (Browser)** ke Supabase Storage menggunakan Supabase JS Client (`supabase.storage.from('...').upload()`). Setelah berhasil, *client* hanya mengirimkan string `path` file tersebut ke Server Action (`createLesson` atau `updateLesson`) untuk disimpan di database Prisma.
 
-**Alur logika:**
-1. Validasi tipe file: hanya `application/pdf`, `application/vnd.openxmlformats-officedocument.presentationml.presentation` (.pptx), `application/vnd.ms-powerpoint` (.ppt legacy)
-2. Validasi ukuran: maksimal **20MB** (asumsi batas awal, bisa disesuaikan — dicatat sebagai konfigurasi, bukan hardcoded angka di banyak tempat, taruh di `lib/constants.ts`)
-3. Upload ke Supabase Storage, path: `documents/{courseId}/{uuid}-{originalFilename}`
-4. Return path storage (**bukan** signed URL langsung — signed URL punya masa berlaku, harus di-generate ulang tiap kali diakses, lihat §6.4)
+**Alur logika Client:**
+1. Validasi tipe file: hanya `application/pdf`, `application/vnd.openxmlformats-officedocument.presentationml.presentation` (.pptx), `application/vnd.ms-powerpoint` (.ppt legacy) untuk materi, dan *image* untuk thumbnail.
+2. Validasi ukuran: maksimal **20MB** untuk materi (bisa disesuaikan di sisi Supabase bucket limit juga).
+3. Upload langsung ke Supabase Storage, path: `documents/{courseId}/{uuid}-{originalFilename}` atau `thumbnails/{uuid}-{filename}`.
+4. Lempar string *path* hasil upload ke Server Action pembentuk data (misal `createLessonAction`).
+
+**Pembersihan Otomatis (Orphan File Prevention):**
+Untuk mencegah penumpukan "file yatim" di Storage, *backend* mengimplementasikan `deleteFileFromStorage` di `lib/supabase-storage.ts`:
+- **Saat `updateLessonAction`**: Jika materi diubah tipenya dari dokumen ke video, atau jika dokumen lama diganti dengan file baru, server action akan otomatis menghapus file lama dari Supabase Storage.
+- **Saat `deleteLessonAction`**: Jika sebuah materi di-*hard-delete* dari database, server action juga akan otomatis menghapus file pendukungnya dari Storage.
 
 **Error handling:**
 | Kondisi | Response |
@@ -600,6 +599,8 @@ Sistem **tidak** memanggil YouTube Data API untuk verifikasi video benar-benar a
 | Tipe file tidak didukung | `{ error: "UNSUPPORTED_FILE_TYPE" }`, pesan UI: "Hanya file PDF atau PPT/PPTX yang didukung" |
 | Ukuran > 20MB | `{ error: "FILE_TOO_LARGE" }` |
 | Upload ke Supabase Storage gagal | `{ error: "UPLOAD_FAILED" }`, tidak ada row lesson yang tersimpan dengan `documentUrl` kosong/rusak |
+
+*(Catatan: Logika upload yang sama berlaku untuk pengunggahan `thumbnailUrl` kursus, dengan bucket atau folder terpisah seperti `thumbnails/{uuid}-{filename}`)*
 
 ### 6.4 Preview Dokumen di Browser
 
@@ -692,7 +693,7 @@ const markLessonSchema = z.object({
 | 5 | Siswa mencoba `enrollInCourse` ke kursus di luar tingkatannya (manipulasi `courseId` di request) | Ditolak di validasi akses (§5.2b poin 1), tidak ada row enrollment tercipta |
 | 6 | Siswa memanggil `markLessonComplete` untuk lesson dari kursus yang belum di-enroll (manipulasi `lessonId`) | Ditolak — validasi §7.1 sekarang cek row `enrollments`, bukan cuma akses tingkatan |
 | 7 | Siswa klik tombol "Enroll" dua kali cepat (double-click/race condition) | Aman — `enrollInCourse` pakai upsert idempotent, tidak menghasilkan row duplikat maupun error |
-| 7a | Upload dokumen dengan tipe file selain PDF/PPT/PPTX, atau ukuran melebihi batas | Ditolak di client (validasi awal) **dan** di server (jangan percaya validasi client saja) |
+| 7a | Upload file gagal atau ukuran melebihi batas | Ditolak di client (validasi awal Supabase) dan `createLesson` tidak akan terpanggil jika upload gagal. Jika upload berhasil tapi simpan DB gagal (misal *courseId* tidak valid), file yatim harus dibersihkan (fitur *rollback* manual di catch block atau *cron* opsional di masa depan). |
 | 8 | Video YouTube yang di-input ternyata di-private-kan tutor setelah lesson dibuat | Tidak terdeteksi otomatis oleh sistem (bukan dicek server-side) — muncul sebagai video error saat siswa memutar; mitigasi dokumentasi, bukan solusi teknis (lihat SDD §10) |
 | 9 | Admin unassign satu-satunya tutor dari kursus yang published | Diizinkan — kursus tetap published & bisa diakses siswa, hanya tidak ada tutor yang "memiliki" untuk sementara sampai admin assign ulang |
 | 10 | Dua admin/tutor reorder modul secara bersamaan (race condition) | Diterima sebagai limitasi Tier 1 (last-write-wins, konsisten dengan skala kecil single-tenant) — tidak dibangun locking khusus |

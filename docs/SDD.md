@@ -358,7 +358,7 @@ Tabel tambahan yang **akan** diperlukan saat Tier 2 dikerjakan (tidak dibuat sek
 - `getStudentList`, `getTutorList` (query + filter, scope seluruh institusi)
 
 **Tutor Dashboard**
-- `getTutorCourses`, `getTutorStudents` (query, discoped otomatis lewat `course_tutors` — FR-41, tidak menerima parameter "lihat semua", hanya kursus/siswa milik tutor yang login)
+- `getTutorStudents` (query, discoped otomatis lewat `course_tutors` — FR-41, tidak menerima parameter "lihat semua", hanya siswa milik tutor yang login). Untuk kursus, tutor dapat melihat semua (`getCourses`), namun hak edit dibatasi.
 
 **Landing Page & Blog**
 - Konten landing page & blog di Tier 1 bersifat mostly-static/config-driven & MDX — tidak semuanya butuh Server Action, sebagian besar cukup Server Component fetch langsung dari config/file MDX.
@@ -560,7 +560,7 @@ Sudah dibahas detail alasannya di PRD §5.1a dan Implementation Plan §2 — dic
 
 **Alternatif yang dipertimbangkan:** Kolom `owner_tutor_id` tunggal (nullable) langsung di `courses`. Lebih sederhana secara query, tapi tidak mampu merepresentasikan co-teaching — harus dipilih ulang jika kebutuhan itu muncul nanti, berarti migrasi skema. Karena kebutuhan multi-tutor sudah diketahui dari awal (bukan spekulasi), pivot table dipilih langsung untuk menghindari migrasi di kemudian hari.
 
-**Trade-off yang diterima:** Scoping akses tutor (§8 NFR Security) butuh subquery/join ke `course_tutors` di setiap tempat yang menampilkan data ke tutor (bukan filter kolom langsung) — diterima dengan pola yang sama seperti §7.6, dipusatkan di satu helper/RLS policy, bukan ditulis ulang manual di tiap halaman.
+**Trade-off yang diterima:** Scoping akses tutor (§8 NFR Security) butuh subquery/join ke `course_tutors` di setiap tempat yang mengizinkan tutor mengubah data atau melihat progress siswa — diterima dengan pola yang sama seperti §7.6, dipusatkan di satu helper/RLS policy, bukan ditulis ulang manual di tiap halaman.
 
 ---
 

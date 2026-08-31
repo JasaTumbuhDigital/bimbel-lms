@@ -1,0 +1,371 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { createClient } from "@/utils/supabase/server";
+import { ActionResult } from "@/types/action";
+import { 
+    createModuleSchema, 
+    updateModuleSchema, 
+    reorderSchema, 
+    createLessonSchema, 
+    updateLessonSchema 
+} from "@/lib/validations/module";
+import { deleteFileFromStorage } from "@/lib/supabase-storage";
+
+/**
+ * Helper untuk mengecek apakah user saat ini boleh mengelola (edit) course ini.
+ * Berlaku untuk Admin (bisa semua) dan Tutor (hanya kursusnya).
+ */
+async function canManageCourse(userId: string, courseId: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return false;
+    
+    if (user.role === "admin") return true;
+    if (user.role !== "tutor") return false;
+    
+    const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId } });
+    if (!tutorProfile) return false;
+    
+    const count = await prisma.courseTutor.count({
+        where: { courseId, tutorProfileId: tutorProfile.id },
+    });
+    
+    return count > 0;
+}
+
+async function getAuthUserId(): Promise<string | null> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const dbUser = await prisma.user.findUnique({ where: { authId: user.id } });
+    return dbUser?.id || null;
+}
+
+// ==========================================
+// MODULE ACTIONS
+// ==========================================
+
+export async function createModuleAction(
+    prevState: ActionResult | null,
+    formData: FormData
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    const rawData = {
+        courseId: formData.get("courseId") as string,
+        title: formData.get("title") as string,
+    };
+
+    const validation = createModuleSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
+    }
+
+    const { courseId, title } = validation.data;
+    
+    const isAuthorized = await canManageCourse(userId, courseId);
+    if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+    try {
+        const lastModule = await prisma.module.findFirst({
+            where: { courseId },
+            orderBy: { sortOrder: "desc" }
+        });
+        const sortOrder = lastModule ? lastModule.sortOrder + 1 : 0;
+
+        await prisma.module.create({
+            data: { courseId, title, sortOrder }
+        });
+
+        revalidatePath(`/admin/courses/${courseId}/edit`);
+        revalidatePath(`/tutor/courses/${courseId}/edit`);
+        return { success: true, message: "Modul berhasil dibuat" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function updateModuleAction(
+    prevState: ActionResult | null,
+    formData: FormData
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    const rawData = {
+        id: formData.get("id") as string,
+        title: formData.get("title") as string,
+    };
+
+    const validation = updateModuleSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
+    }
+
+    const { id, title } = validation.data;
+
+    try {
+        const moduleRecord = await prisma.module.findUnique({ where: { id } });
+        if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        await prisma.module.update({
+            where: { id },
+            data: { ...(title && { title }) }
+        });
+
+        revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
+        return { success: true, message: "Modul berhasil diubah" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function deleteModuleAction(
+    moduleId: string
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    try {
+        const moduleRecord = await prisma.module.findUnique({ where: { id: moduleId } });
+        if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        await prisma.module.delete({ where: { id: moduleId } });
+
+        revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
+        return { success: true, message: "Modul berhasil dihapus" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function reorderModulesAction(
+    courseId: string,
+    orderedModuleIds: string[]
+): Promise<ActionResult> {
+    const rawData = {
+        parentId: courseId,
+        orderedIds: orderedModuleIds
+    };
+    const validation = reorderSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Format data urutan tidak valid." };
+    }
+
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    const isAuthorized = await canManageCourse(userId, courseId);
+    if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+    try {
+        // Lakukan batch update secara transaksional
+        await prisma.$transaction(
+            orderedModuleIds.map((id, index) => 
+                prisma.module.update({
+                    where: { id },
+                    data: { sortOrder: index }
+                })
+            )
+        );
+
+        revalidatePath(`/admin/courses/${courseId}/edit`);
+        revalidatePath(`/tutor/courses/${courseId}/edit`);
+        return { success: true, message: "Urutan modul berhasil diubah" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+// ==========================================
+// LESSON ACTIONS
+// ==========================================
+
+export async function createLessonAction(
+    prevState: ActionResult | null,
+    formData: FormData
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    const rawData = {
+        moduleId: formData.get("moduleId") as string,
+        title: formData.get("title") as string,
+        contentType: formData.get("contentType") as string,
+        videoUrl: (formData.get("videoUrl") as string) || undefined,
+        documentUrl: (formData.get("documentUrl") as string) || undefined,
+    };
+
+    const validation = createLessonSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
+    }
+
+    const data = validation.data;
+
+    try {
+        const moduleRecord = await prisma.module.findUnique({ where: { id: data.moduleId } });
+        if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        const lastLesson = await prisma.lesson.findFirst({
+            where: { moduleId: data.moduleId },
+            orderBy: { sortOrder: "desc" }
+        });
+        const sortOrder = lastLesson ? lastLesson.sortOrder + 1 : 0;
+
+        await prisma.lesson.create({
+            data: { 
+                moduleId: data.moduleId,
+                title: data.title,
+                contentType: data.contentType,
+                videoUrl: data.videoUrl,
+                documentUrl: data.documentUrl,
+                sortOrder 
+            }
+        });
+
+        revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
+        return { success: true, message: "Materi berhasil ditambahkan" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function updateLessonAction(
+    prevState: ActionResult | null,
+    formData: FormData
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    const rawData = {
+        id: formData.get("id") as string,
+        title: formData.get("title") as string,
+        contentType: formData.get("contentType") as string,
+        videoUrl: formData.has("videoUrl") ? (formData.get("videoUrl") as string) : undefined,
+        documentUrl: formData.has("documentUrl") ? (formData.get("documentUrl") as string) : undefined,
+    };
+
+    const validation = updateLessonSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
+    }
+
+    const { id, ...updateData } = validation.data;
+
+    try {
+        const lessonRecord = await prisma.lesson.findUnique({ 
+            where: { id },
+            include: { module: true }
+        });
+        if (!lessonRecord) return { success: false, error: "Materi tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, lessonRecord.module.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        await prisma.lesson.update({
+            where: { id },
+            data: updateData
+        });
+
+        // Bersihkan file lama di storage jika ada penggantian file atau ubah tipe jadi video
+        if (lessonRecord.contentType === "document" && lessonRecord.documentUrl) {
+            const isChangingFile = updateData.contentType === "video" || (updateData.documentUrl && updateData.documentUrl !== lessonRecord.documentUrl);
+            if (isChangingFile) {
+                await deleteFileFromStorage(lessonRecord.documentUrl);
+            }
+        }
+
+        revalidatePath(`/admin/courses/${lessonRecord.module.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${lessonRecord.module.courseId}/edit`);
+        return { success: true, message: "Materi berhasil diubah" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function deleteLessonAction(
+    lessonId: string
+): Promise<ActionResult> {
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    try {
+        const lessonRecord = await prisma.lesson.findUnique({ 
+            where: { id: lessonId },
+            include: { module: true }
+        });
+        if (!lessonRecord) return { success: false, error: "Materi tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, lessonRecord.module.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        await prisma.lesson.delete({ where: { id: lessonId } });
+
+        // Bersihkan file di storage jika materi yang dihapus berupa dokumen
+        if (lessonRecord.contentType === "document" && lessonRecord.documentUrl) {
+            await deleteFileFromStorage(lessonRecord.documentUrl);
+        }
+
+        revalidatePath(`/admin/courses/${lessonRecord.module.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${lessonRecord.module.courseId}/edit`);
+        return { success: true, message: "Materi berhasil dihapus" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}
+
+export async function reorderLessonsAction(
+    moduleId: string,
+    orderedLessonIds: string[]
+): Promise<ActionResult> {
+    const rawData = {
+        parentId: moduleId,
+        orderedIds: orderedLessonIds
+    };
+    const validation = reorderSchema.safeParse(rawData);
+    if (!validation.success) {
+        return { success: false, error: "Format data urutan tidak valid." };
+    }
+
+    const userId = await getAuthUserId();
+    if (!userId) return { success: false, error: "Akses ditolak." };
+
+    try {
+        const moduleRecord = await prisma.module.findUnique({ where: { id: moduleId } });
+        if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
+
+        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
+        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+
+        await prisma.$transaction(
+            orderedLessonIds.map((id, index) => 
+                prisma.lesson.update({
+                    where: { id },
+                    data: { sortOrder: index }
+                })
+            )
+        );
+
+        revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
+        revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
+        return { success: true, message: "Urutan materi berhasil diubah" };
+    } catch (error: any) {
+        return { success: false, error: error.message || "Terjadi kesalahan" };
+    }
+}

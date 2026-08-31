@@ -168,7 +168,7 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-7 (P0, T1):** Admin harus bisa membuat kursus dengan struktur modul → sub-materi (video/dokumen/kuis), dan menugaskan satu atau lebih tutor sebagai pengampu kursus tersebut (lihat FR-40). Tutor hanya dapat membuat/mengedit kursus yang dirinya menjadi salah satu pengampunya.
   - Edge case: kursus yang belum punya tutor pengampu tetap bisa dibuat/dikelola oleh admin, tapi tidak akan muncul di dashboard tutor mana pun sampai ditugaskan.
 - **FR-40 (P0, T1):** Admin harus bisa menugaskan (assign) atau melepas (unassign) satu atau lebih tutor sebagai pengampu suatu kursus, kapan saja, tanpa memengaruhi data siswa/progress yang sudah ada di kursus tersebut.
-- **FR-41 (P0, T1):** Akses & data yang terlihat oleh tutor (daftar kursus, daftar siswa, dashboard) harus dibatasi hanya pada kursus yang dia ampu dan siswa yang terdaftar di kursus tersebut — berbeda dengan admin yang melihat seluruh institusi (lihat FR-29, FR-30).
+- **FR-41 (P0, T1):** Tutor dapat melihat daftar dan detail **seluruh** kursus di institusi (seperti admin). Namun, hak untuk **mengubah/mengedit** (CRUD modul & materi) serta melihat analitik siswa dibatasi hanya pada kursus yang ia ampu (terdaftar di `course_tutors`).
 - **FR-8 (P0, T1):** Sistem harus mendukung embed video YouTube (unlisted) sebagai materi.
   - Validasi: URL harus format YouTube valid.
 - **FR-9 (P0, T1):** Sistem harus melacak status penyelesaian materi per siswa lewat **penandaan manual** — siswa menekan tombol "Tandai Selesai" setelah mempelajari suatu materi (video/dokumen).
