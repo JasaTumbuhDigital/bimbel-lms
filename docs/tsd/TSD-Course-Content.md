@@ -213,13 +213,27 @@ USING (
 -- Kedua tabel pivot ini: SELECT mengikuti akses ke courses induk (implisit lewat join di query aplikasi,
 -- RLS cukup dibatasi ke write saja karena data pivot tidak sensitif untuk dibaca siapa pun yang bisa lihat course-nya)
 
--- WRITE course_class_levels: hanya admin (FR-38 dikelola admin)
+-- WRITE course_class_levels: admin atau tutor utama (pembuat kursus)
 CREATE POLICY course_class_levels_write ON course_class_levels FOR ALL
-USING (EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin'));
+USING (
+  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
+  OR EXISTS (
+    SELECT 1 FROM courses c 
+    JOIN users u ON u.id = c.created_by 
+    WHERE c.id = course_class_levels.course_id AND u.auth_id = auth.uid()
+  )
+);
 
--- WRITE course_tutors: hanya admin (FR-40)
+-- WRITE course_tutors: admin atau tutor utama (pembuat kursus)
 CREATE POLICY course_tutors_write ON course_tutors FOR ALL
-USING (EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin'));
+USING (
+  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
+  OR EXISTS (
+    SELECT 1 FROM courses c 
+    JOIN users u ON u.id = c.created_by 
+    WHERE c.id = course_tutors.course_id AND u.auth_id = auth.uid()
+  )
+);
 ```
 
 ### 3.3 Tabel `modules` & `lessons`

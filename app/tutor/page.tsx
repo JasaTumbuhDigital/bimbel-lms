@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { logoutAction } from "@/lib/actions/auth";
 
 export default function TutorDashboardPage() {
@@ -20,14 +21,33 @@ export default function TutorDashboardPage() {
                     </form>
                 </header>
 
-                <main className="bg-white border border-slate-200 rounded-lg p-6">
-                    <h2 className="text-base font-semibold text-slate-900 mb-1">
-                        Selamat Datang di Halaman Tutor
-                    </h2>
-                    <p className="text-sm text-slate-600">
-                        Halaman ini dikhususkan untuk role tutor. Di sini Anda dapat mengelola materi modul yang Anda ampu.
-                    </p>
-                </main>
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Card 1: Manajemen Kursus */}
+                    <Link
+                        href="/tutor/courses"
+                        className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+                    >
+                        <h2 className="text-base font-semibold text-slate-900 mb-1">
+                            Manajemen Kursus Saya &rarr;
+                        </h2>
+                        <p className="text-xs text-slate-600">
+                            Buat kursus mandiri atau kelola modul & materi pada kursus yang Anda ampu.
+                        </p>
+                    </Link>
+
+                    {/* Card 2: Eksplorasi Kursus */}
+                    <Link
+                        href="/tutor/explore"
+                        className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+                    >
+                        <h2 className="text-base font-semibold text-slate-900 mb-1">
+                            Eksplorasi Katalog Kursus &rarr;
+                        </h2>
+                        <p className="text-xs text-slate-600">
+                            Lihat dan pratinjau materi seluruh kursus dalam platform secara read-only.
+                        </p>
+                    </Link>
+                </section>
             </div>
         </div>
     );

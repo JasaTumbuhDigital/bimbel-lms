@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { logoutAction } from "@/lib/actions/auth";
 
 export default function StudentDashboardPage() {
@@ -20,14 +21,20 @@ export default function StudentDashboardPage() {
                     </form>
                 </header>
 
-                <main className="bg-white border border-slate-200 rounded-lg p-6">
-                    <h2 className="text-base font-semibold text-slate-900 mb-1">
-                        Selamat Datang di Portal Siswa
-                    </h2>
-                    <p className="text-sm text-slate-600">
-                        Halaman ini dikhususkan untuk role student. Di sini kamu dapat mengakses materi kursus dan kuis.
-                    </p>
-                </main>
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Card 1: Katalog Kursus */}
+                    <Link
+                        href="/student/courses"
+                        className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+                    >
+                        <h2 className="text-base font-semibold text-slate-900 mb-1">
+                            Katalog Kursus Pembelajaran &rarr;
+                        </h2>
+                        <p className="text-xs text-slate-600">
+                            Jelajahi kursus yang tersedia untuk tingkatan kelas kamu dan mulai belajar.
+                        </p>
+                    </Link>
+                </section>
             </div>
         </div>
     );

@@ -266,6 +266,14 @@ export async function updateCourseAccessAction(
     const visibleToAllLevels = formData.get("visibleToAllLevels") === "true";
     const isPublished = formData.get("isPublished") === "true";
 
+    // Validasi TSD §4.3: Kursus tidak bisa dipublish tanpa target visibilitas (tingkatan / universal)
+    if (isPublished && !visibleToAllLevels && rawClassLevelIds.length === 0) {
+        return {
+            success: false,
+            error: "Kursus belum bisa dipublish — pilih minimal satu tingkatan, atau tandai 'berlaku untuk semua tingkatan' terlebih dahulu."
+        };
+    }
+
     // Pastikan Tutor Utama (jika dia adalah tutor) selalu masuk ke dalam daftar pengampu
     if (course.createdBy) {
         const creatorProfile = await prisma.tutorProfile.findUnique({ where: { userId: course.createdBy } });
