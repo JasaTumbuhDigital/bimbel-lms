@@ -24,16 +24,14 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
     }
 
     // Hitung statistik pelajaran
-    let firstLessonId = null;
+    let firstLessonId: string | null = null;
     let totalLessons = 0;
 
-    course.modules.forEach((module, mIdx) => {
+    course.modules.forEach((module) => {
         totalLessons += module.lessons.length;
-        module.lessons.forEach((lesson, lIdx) => {
-            if (mIdx === 0 && lIdx === 0) {
-                firstLessonId = lesson.id;
-            }
-        });
+        if (!firstLessonId && module.lessons.length > 0) {
+            firstLessonId = module.lessons[0].id;
+        }
     });
 
     const supabase = await createClient();

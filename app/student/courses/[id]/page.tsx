@@ -27,16 +27,16 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
     const isEnrolled = course.enrollments && course.enrollments.length > 0;
     
     // Temukan lesson pertama untuk tombol "Lanjutkan Belajar"
-    let firstLessonId = null;
+    let firstLessonId: string | null = null;
     let totalLessons = 0;
     let completedLessons = 0;
 
-    course.modules.forEach((module, mIdx) => {
+    course.modules.forEach((module) => {
         totalLessons += module.lessons.length;
-        module.lessons.forEach((lesson, lIdx) => {
-            if (mIdx === 0 && lIdx === 0) {
-                firstLessonId = lesson.id;
-            }
+        if (!firstLessonId && module.lessons.length > 0) {
+            firstLessonId = module.lessons[0].id;
+        }
+        module.lessons.forEach((lesson) => {
             if ((lesson as any).progress && (lesson as any).progress.length > 0 && (lesson as any).progress[0].isCompleted) {
                 completedLessons++;
             }

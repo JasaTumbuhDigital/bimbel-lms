@@ -256,8 +256,8 @@ export async function updateCourseAccessAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
-    if (!success) {
+    const { success, error, course } = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!success || !course) {
         return { success: false, error: error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat mengatur akses kursus." };
     }
 
@@ -265,6 +265,14 @@ export async function updateCourseAccessAction(
     const rawTutorProfileIds = formData.getAll("tutorProfileIds") as string[];
     const visibleToAllLevels = formData.get("visibleToAllLevels") === "true";
     const isPublished = formData.get("isPublished") === "true";
+
+    // Pastikan Tutor Utama (jika dia adalah tutor) selalu masuk ke dalam daftar pengampu
+    if (course.createdBy) {
+        const creatorProfile = await prisma.tutorProfile.findUnique({ where: { userId: course.createdBy } });
+        if (creatorProfile && !rawTutorProfileIds.includes(creatorProfile.id)) {
+            rawTutorProfileIds.push(creatorProfile.id);
+        }
+    }
 
     try {
         await prisma.$transaction(async (tx) => {

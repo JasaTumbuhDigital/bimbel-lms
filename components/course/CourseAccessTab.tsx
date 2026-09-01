@@ -124,10 +124,13 @@ export default function CourseAccessTab({
                             <input 
                                 type="checkbox" 
                                 checked={selectedTutorIds.includes(tutor.id)}
+                                disabled={tutor.user.id === course.createdBy}
                                 onChange={() => handleTutorToggle(tutor.id)}
-                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 disabled:opacity-50"
                             />
-                            <span className="text-sm text-slate-700">{tutor.user.name}</span>
+                            <span className={`text-sm ${tutor.user.id === course.createdBy ? 'text-slate-500 font-medium' : 'text-slate-700'}`}>
+                                {tutor.user.name} {tutor.user.id === course.createdBy && "(Tutor Utama)"}
+                            </span>
                         </label>
                     ))}
                     {availableTutors.length === 0 && (
