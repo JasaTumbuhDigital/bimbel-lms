@@ -13,26 +13,7 @@ import {
 } from "@/lib/validations/module";
 import { deleteFileFromStorage } from "@/lib/supabase-storage";
 
-/**
- * Helper untuk mengecek apakah user saat ini boleh mengelola (edit) course ini.
- * Berlaku untuk Admin (bisa semua) dan Tutor (hanya kursusnya).
- */
-async function canManageCourse(userId: string, courseId: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return false;
-    
-    if (user.role === "admin") return true;
-    if (user.role !== "tutor") return false;
-    
-    const tutorProfile = await prisma.tutorProfile.findUnique({ where: { userId } });
-    if (!tutorProfile) return false;
-    
-    const count = await prisma.courseTutor.count({
-        where: { courseId, tutorProfileId: tutorProfile.id },
-    });
-    
-    return count > 0;
-}
+import { verifyCourseAccess } from "./course";
 
 async function getAuthUserId(): Promise<string | null> {
     const supabase = await createClient();
@@ -66,8 +47,8 @@ export async function createModuleAction(
 
     const { courseId, title } = validation.data;
     
-    const isAuthorized = await canManageCourse(userId, courseId);
-    if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+    const { success } = await verifyCourseAccess(courseId, false);
+    if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
     try {
         const lastModule = await prisma.module.findFirst({
@@ -111,8 +92,8 @@ export async function updateModuleAction(
         const moduleRecord = await prisma.module.findUnique({ where: { id } });
         if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(moduleRecord.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.module.update({
             where: { id },
@@ -137,8 +118,8 @@ export async function deleteModuleAction(
         const moduleRecord = await prisma.module.findUnique({ where: { id: moduleId } });
         if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(moduleRecord.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.module.delete({ where: { id: moduleId } });
 
@@ -166,8 +147,8 @@ export async function reorderModulesAction(
     const userId = await getAuthUserId();
     if (!userId) return { success: false, error: "Akses ditolak." };
 
-    const isAuthorized = await canManageCourse(userId, courseId);
-    if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+    const { success } = await verifyCourseAccess(courseId, false);
+    if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
     try {
         // Lakukan batch update secara transaksional
@@ -218,8 +199,8 @@ export async function createLessonAction(
         const moduleRecord = await prisma.module.findUnique({ where: { id: data.moduleId } });
         if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(moduleRecord.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         const lastLesson = await prisma.lesson.findFirst({
             where: { moduleId: data.moduleId },
@@ -275,8 +256,8 @@ export async function updateLessonAction(
         });
         if (!lessonRecord) return { success: false, error: "Materi tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, lessonRecord.module.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(lessonRecord.module.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.lesson.update({
             where: { id },
@@ -312,8 +293,8 @@ export async function deleteLessonAction(
         });
         if (!lessonRecord) return { success: false, error: "Materi tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, lessonRecord.module.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(lessonRecord.module.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.lesson.delete({ where: { id: lessonId } });
 
@@ -350,8 +331,8 @@ export async function reorderLessonsAction(
         const moduleRecord = await prisma.module.findUnique({ where: { id: moduleId } });
         if (!moduleRecord) return { success: false, error: "Modul tidak ditemukan." };
 
-        const isAuthorized = await canManageCourse(userId, moduleRecord.courseId);
-        if (!isAuthorized) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
+        const { success } = await verifyCourseAccess(moduleRecord.courseId, false);
+        if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.$transaction(
             orderedLessonIds.map((id, index) => 

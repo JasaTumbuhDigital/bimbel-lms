@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const courseSchema = z.object({
+    id: z.string().optional(),
     title: z
         .string()
         .min(3, "Judul kursus minimal 3 karakter")

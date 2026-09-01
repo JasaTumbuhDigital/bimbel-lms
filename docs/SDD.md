@@ -358,7 +358,7 @@ Tabel tambahan yang **akan** diperlukan saat Tier 2 dikerjakan (tidak dibuat sek
 - `getStudentList`, `getTutorList` (query + filter, scope seluruh institusi)
 
 **Tutor Dashboard**
-- `getTutorStudents` (query, discoped otomatis lewat `course_tutors` — FR-41, tidak menerima parameter "lihat semua", hanya siswa milik tutor yang login). Untuk kursus, tutor dapat melihat semua (`getCourses`), namun hak edit dibatasi.
+- `getTutorStudents` (query, discoped otomatis lewat `course_tutors` — FR-41, tidak menerima parameter "lihat semua", hanya siswa milik tutor yang login). Untuk manajemen kursus (`getCourses`), daftar kursus Tutor dipangkas murni ke kursus yang diampunya saja (`course_tutors`). Untuk melihat/mereview kursus lain, tersedia query khusus `getAllCoursesForPreview`. Pembedaan hak edit menggunakan `created_by` (Tutor Utama / Owner vs Co-Tutor).
 
 **Landing Page & Blog**
 - Konten landing page & blog di Tier 1 bersifat mostly-static/config-driven & MDX — tidak semuanya butuh Server Action, sebagian besar cukup Server Component fetch langsung dari config/file MDX.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCourses } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { prisma } from "@/lib/prisma";
+import ArchiveCourseButton from "@/components/admin/ArchiveCourseButton";
 
 export const metadata = {
     title: "Eksplorasi Kursus - Tutor",
@@ -29,8 +30,8 @@ export default async function TutorCoursesPage() {
                         >
                             &larr; Kembali ke Dashboard Tutor
                         </Link>
-                        <h1 className="text-xl font-bold text-slate-900">Eksplorasi Kursus</h1>
-                        <p className="text-xs text-slate-600">Anda dapat melihat semua kursus, tetapi hanya dapat mengedit kursus yang Anda ampu.</p>
+                        <h1 className="text-xl font-bold text-slate-900">Manajemen Kursus</h1>
+                        <p className="text-xs text-slate-600">Daftar kursus yang Anda ampu (sebagai Tutor Utama atau Pendamping).</p>
                     </div>
                     <Link 
                         href="/tutor/courses/new" 
@@ -46,8 +47,8 @@ export default async function TutorCoursesPage() {
                             <tr>
                                 <th className="py-3 px-4">Judul</th>
                                 <th className="py-3 px-4">Status</th>
+                                <th className="py-3 px-4">Peran Anda</th>
                                 <th className="py-3 px-4">Tingkatan</th>
-                                <th className="py-3 px-4">Tutor Pengampu</th>
                                 <th className="py-3 px-4 text-right">Aksi</th>
                             </tr>
                         </thead>
@@ -55,12 +56,12 @@ export default async function TutorCoursesPage() {
                             {courses.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="py-8 px-4 text-center text-slate-500">
-                                        Belum ada kursus yang tersedia.
+                                        Anda belum mengampu kursus apapun.
                                     </td>
                                 </tr>
                             ) : (
                                 courses.map((course) => {
-                                    const isMyCourse = tutorProfileId && course.tutors.some(t => t.tutorProfileId === tutorProfileId);
+                                    const isOwner = course.createdBy === userId;
                                     
                                     return (
                                         <tr key={course.id} className="hover:bg-slate-50">
@@ -73,36 +74,28 @@ export default async function TutorCoursesPage() {
                                                     {course.isPublished ? 'Published' : 'Draft'}
                                                 </span>
                                             </td>
+                                            <td className="py-3 px-4 text-xs font-medium">
+                                                {isOwner ? (
+                                                    <span className="text-blue-700">Tutor Utama</span>
+                                                ) : (
+                                                    <span className="text-slate-600">Co-Tutor</span>
+                                                )}
+                                            </td>
                                             <td className="py-3 px-4 text-xs text-slate-600">
                                                 {course.visibleToAllLevels ? "Semua Tingkatan" : 
                                                     course.classLevels.length > 0 
                                                     ? course.classLevels.map(cl => cl.classLevel.name).join(", ") 
                                                     : "-"}
                                             </td>
-                                            <td className="py-3 px-4 text-xs text-slate-600">
-                                                {course.tutors.length > 0 
-                                                    ? course.tutors.map(t => (
-                                                        <span key={t.id} className={t.tutorProfileId === tutorProfileId ? "font-bold text-blue-600" : ""}>
-                                                            {t.tutorProfile.user.name}
-                                                        </span>
-                                                      )).reduce((prev, curr) => [prev, ", ", curr] as any)
-                                                    : "-"}
-                                            </td>
-                                            <td className="py-3 px-4 text-right">
-                                                {isMyCourse ? (
-                                                    <Link 
-                                                        href={`/tutor/courses/${course.id}/edit`} 
-                                                        className="text-blue-600 hover:text-blue-900 text-xs font-medium hover:underline"
-                                                    >
-                                                        Kelola Kursus
-                                                    </Link>
-                                                ) : (
-                                                    <Link 
-                                                        href={`/tutor/courses/${course.id}`} 
-                                                        className="text-slate-600 hover:text-slate-900 text-xs font-medium hover:underline"
-                                                    >
-                                                        Lihat Detail
-                                                    </Link>
+                                            <td className="py-3 px-4 flex justify-end gap-3 items-center">
+                                                <Link 
+                                                    href={`/tutor/courses/${course.id}/edit`} 
+                                                    className="text-blue-600 hover:text-blue-900 text-xs font-medium hover:underline"
+                                                >
+                                                    Kelola Kursus
+                                                </Link>
+                                                {isOwner && (
+                                                    <ArchiveCourseButton courseId={course.id} />
                                                 )}
                                             </td>
                                         </tr>

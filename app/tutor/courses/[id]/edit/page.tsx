@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
 import CourseBuilder from "@/components/admin/CourseBuilder";
 
+import { getAuthenticatedUser } from "@/lib/data/auth";
+import { prisma } from "@/lib/prisma";
+
 export const metadata = {
     title: "Kelola Kursus - Tutor",
 };
@@ -9,9 +12,21 @@ export const metadata = {
 export default async function TutorEditCoursePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const course = await getCourseById(params.id);
+    const user = await getAuthenticatedUser();
 
-    if (!course) {
+    if (!course || !user) {
         notFound();
+    }
+
+    const isOwner = course.createdBy === user.id;
+
+    let availableClassLevels: any[] = [];
+    let availableTutors: any[] = [];
+    
+    // Jika owner, ia berhak mengubah setting (perlu data class levels dan tutors)
+    if (isOwner) {
+        availableClassLevels = await prisma.classLevel.findMany({ orderBy: { name: "asc" } });
+        availableTutors = await prisma.tutorProfile.findMany({ include: { user: true } });
     }
 
     return (
@@ -24,7 +39,13 @@ export default async function TutorEditCoursePage(props: { params: Promise<{ id:
                     </div>
                 </header>
                 
-                <CourseBuilder course={course} role="tutor" />
+                <CourseBuilder 
+                    course={course} 
+                    role="tutor" 
+                    isOwner={isOwner}
+                    availableClassLevels={availableClassLevels}
+                    availableTutors={availableTutors}
+                />
             </div>
         </div>
     );

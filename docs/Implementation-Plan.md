@@ -109,7 +109,7 @@
 - [ ] Admin: assign/unassign satu atau lebih tutor pengampu per kursus (`course_tutors`) — FR-40
 - [ ] Siswa: listing kursus terfilter tingkatan; detail kursus tampil sebagai preview (struktur modul terlihat, konten terkunci) sebelum klik "Enroll"
 - [ ] Tombol "Enroll" eksplisit di halaman detail kursus (bukan auto-enroll diam-diam) — buka akses penuh ke konten setelah diklik
-- [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`) — FR-41
+- [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`), dengan pembedaan hak akses Tutor Utama (`createdBy`) vs Co-Tutor, serta halaman "Eksplorasi Kursus" Read-Only untuk preview seluruh kursus — FR-41
 - [ ] Video: embed YouTube unlisted (player biasa, **tanpa** tracking otomatis di T1)
 - [ ] Dokumen: upload PDF/PPT ke Supabase Storage + preview di browser (PDF native, PPT/PPTX via Google Docs Viewer)
 - [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`, hanya untuk siswa yang sudah enroll)

@@ -23,6 +23,7 @@ export async function createCourseAction(
     const rawTutorProfileIds = formData.getAll("tutorProfileIds") as string[];
 
     const rawData = {
+        id: formData.get("id") as string | undefined,
         title: formData.get("title") as string,
         description: (formData.get("description") as string) || undefined,
         thumbnailUrl: (formData.get("thumbnailUrl") as string) || undefined,
@@ -40,11 +41,19 @@ export async function createCourseAction(
         };
     }
 
-    const { title, description, thumbnailUrl, visibleToAllLevels, classLevelIds, tutorProfileIds } = validation.data;
+    const { id, title, description, thumbnailUrl, visibleToAllLevels, classLevelIds, tutorProfileIds } = validation.data;
+
+    // Jika yang membuat adalah Tutor, pastikan ia masuk ke dalam tutorProfileIds
+    if (user.role === "tutor" && user.tutorProfile) {
+        if (!tutorProfileIds.includes(user.tutorProfile.id)) {
+            tutorProfileIds.push(user.tutorProfile.id);
+        }
+    }
 
     try {
         const newCourse = await prisma.course.create({
             data: {
+                id,
                 title,
                 description,
                 thumbnailUrl,
@@ -138,9 +147,9 @@ export async function enrollInCourseAction(courseId: string): Promise<ActionResu
  * 3. Action Arsip Kursus (Soft Delete)
  */
 export async function archiveCourseAction(courseId: string): Promise<ActionResult> {
-    const user = await getAuthenticatedUser();
-    if (!user || user.role !== "admin") {
-        return { success: false, error: "Akses ditolak. Hanya Admin yang dapat menghapus kursus." };
+    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!success) {
+        return { success: false, error: error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat menghapus kursus." };
     }
 
     try {
@@ -168,9 +177,9 @@ export async function updateCourseAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const user = await getAuthenticatedUser();
-    if (!user || (user.role !== "admin" && user.role !== "tutor")) {
-        return { success: false, error: "Akses ditolak." };
+    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!success) {
+        return { success: false, error: error || "Akses ditolak." };
     }
 
     const title = formData.get("title") as string;
@@ -202,8 +211,41 @@ export async function updateCourseAction(
         return { success: true, message: "Informasi kursus berhasil diperbarui." };
     } catch (error) {
         console.error(error);
-        return { success: false, error: "Gagal memperbarui kursus." };
+        return { success: false, error: "Gagal memperbarui akses kursus." };
     }
+}
+
+/**
+ * Helper: Validasi Akses Tutor terhadap Kursus
+ * Jika requiresOwner = true, hanya Admin & Tutor Utama (createdBy) yang lolos.
+ * Jika requiresOwner = false, Admin, Tutor Utama, dan Co-Tutor lolos.
+ */
+export async function verifyCourseAccess(courseId: string, requiresOwner = false): Promise<{ success: boolean; error?: string; user?: any; course?: any }> {
+    const user = await getAuthenticatedUser();
+    if (!user) return { success: false, error: "Tidak terautentikasi" };
+    if (user.role === "admin") return { success: true, user };
+    if (user.role !== "tutor") return { success: false, error: "Akses ditolak" };
+
+    const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: { tutors: true }
+    });
+
+    if (!course) return { success: false, error: "Kursus tidak ditemukan" };
+
+    if (requiresOwner) {
+        if (course.createdBy !== user.id) {
+            return { success: false, error: "Akses ditolak. Hanya Tutor Utama (Pembuat) yang diizinkan." };
+        }
+        return { success: true, user, course };
+    }
+
+    const isAssigned = course.tutors.some(t => t.tutorProfileId === user.tutorProfile?.id);
+    if (!isAssigned && course.createdBy !== user.id) {
+         return { success: false, error: "Akses ditolak. Anda tidak di-assign ke kursus ini." };
+    }
+
+    return { success: true, user, course };
 }
 
 /**
@@ -214,9 +256,9 @@ export async function updateCourseAccessAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const user = await getAuthenticatedUser();
-    if (!user || user.role !== "admin") {
-        return { success: false, error: "Akses ditolak. Hanya Admin yang dapat mengatur akses kursus." };
+    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!success) {
+        return { success: false, error: error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat mengatur akses kursus." };
     }
 
     const rawClassLevelIds = formData.getAll("classLevelIds") as string[];
