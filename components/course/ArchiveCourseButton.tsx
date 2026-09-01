@@ -18,7 +18,7 @@ export default function ArchiveCourseButton({ courseId }: { courseId: string }) 
     };
 
     return (
-        <button 
+        <button
             onClick={handleArchive}
             disabled={isPending}
             className="text-red-600 hover:text-red-900 text-sm font-medium disabled:opacity-50"

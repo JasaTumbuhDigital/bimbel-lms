@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCourses } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { prisma } from "@/lib/prisma";
-import ArchiveCourseButton from "@/components/admin/ArchiveCourseButton";
+import ArchiveCourseButton from "@/components/course/ArchiveCourseButton";
 
 export const metadata = {
     title: "Eksplorasi Kursus - Tutor",

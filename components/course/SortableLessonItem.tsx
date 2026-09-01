@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { deleteLessonAction, updateLessonAction } from "@/lib/actions/module";
-import DocumentUpload from "./DocumentUpload";
+import DocumentUpload from "@/components/ui/DocumentUpload";
 
 export default function SortableLessonItem({ lesson, courseId, moduleId }: { lesson: any; courseId: string; moduleId: string }) {
     const [isPending, startTransition] = useTransition();

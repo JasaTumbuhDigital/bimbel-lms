@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
 import { prisma } from "@/lib/prisma";
-import CourseBuilder from "@/components/admin/CourseBuilder";
+import CourseBuilder from "@/components/course/CourseBuilder";
 
 export const metadata = {
     title: "Edit Kursus - Admin",

@@ -1,4 +1,4 @@
-import CreateCourseForm from "@/components/admin/CreateCourseForm";
+import CreateCourseForm from "@/components/course/CreateCourseForm";
 
 export const metadata = {
     title: "Buat Kursus Baru - Admin",

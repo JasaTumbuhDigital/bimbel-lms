@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { institutionConfig } from "@/config/institution";
-import EnrollButton from "@/components/student/EnrollButton";
+import EnrollButton from "@/components/course/EnrollButton";
 
 export const metadata = {
     title: "Detail Kursus - Student",

@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from "@/lib/data/auth";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { institutionConfig } from "@/config/institution";
-import MarkAsDoneButton from "@/components/student/MarkAsDoneButton";
+import MarkAsDoneButton from "@/components/course/MarkAsDoneButton";
 
 export const metadata = {
     title: "Pemutar Materi - Student",

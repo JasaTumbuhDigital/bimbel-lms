@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getClassLevels } from "@/lib/data/class-level";
-import CreateStudentForm from "@/components/admin/CreateStudentForm";
+import CreateStudentForm from "@/components/users/CreateStudentForm";
 
 export default async function NewStudentPage() {
     const classLevels = await getClassLevels();

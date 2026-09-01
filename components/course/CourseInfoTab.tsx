@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateCourseAction } from "@/lib/actions/course";
-import ThumbnailUpload from "./ThumbnailUpload";
+import ThumbnailUpload from "@/components/ui/ThumbnailUpload";
 
 export default function CourseInfoTab({ course, role }: { course: any, role: "admin" | "tutor" }) {
     const [isPending, startTransition] = useTransition();

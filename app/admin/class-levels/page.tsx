@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getClassLevels } from "@/lib/data/class-level";
-import CreateClassLevelForm from "@/components/admin/CreateClassLevelForm";
-import DeleteClassLevelButton from "@/components/admin/DeleteClassLevelButton";
+import CreateClassLevelForm from "@/components/class-level/CreateClassLevelForm";
+import DeleteClassLevelButton from "@/components/class-level/DeleteClassLevelButton";
 
 export default async function ClassLevelsPage() {
     const classLevels = await getClassLevels();

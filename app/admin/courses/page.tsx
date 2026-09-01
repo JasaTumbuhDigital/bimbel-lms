@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCourses } from "@/lib/data/course";
-import ArchiveCourseButton from "@/components/admin/ArchiveCourseButton";
+import ArchiveCourseButton from "@/components/course/ArchiveCourseButton";
 
 export const metadata = {
     title: "Manajemen Kursus - Admin",

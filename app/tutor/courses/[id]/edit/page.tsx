@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
-import CourseBuilder from "@/components/admin/CourseBuilder";
+import CourseBuilder from "@/components/course/CourseBuilder";
 
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { prisma } from "@/lib/prisma";

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCourseAction } from "@/lib/actions/course";
-import ThumbnailUpload from "./ThumbnailUpload";
+import ThumbnailUpload from "@/components/ui/ThumbnailUpload";
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getStudents } from "@/lib/data/auth";
 import { getClassLevels } from "@/lib/data/class-level";
-import StudentRowActions from "@/components/admin/StudentRowActions";
+import StudentRowActions from "@/components/users/StudentRowActions";
 
 export default async function StudentsPage() {
     const [students, classLevels] = await Promise.all([

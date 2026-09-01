@@ -23,7 +23,7 @@ import { reorderLessonsAction, createLessonAction, updateModuleAction, deleteMod
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
 import SortableLessonItem from "./SortableLessonItem";
-import DocumentUpload from "./DocumentUpload";
+import DocumentUpload from "@/components/ui/DocumentUpload";
 
 const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
 
