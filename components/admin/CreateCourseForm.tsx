@@ -1,16 +1,25 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCourseAction } from "@/lib/actions/course";
+import ThumbnailUpload from "./ThumbnailUpload";
+import { createClient } from "@/utils/supabase/client";
+import { institutionConfig } from "@/config/institution";
 
 export default function CreateCourseForm({ role }: { role: "admin" | "tutor" }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
+    const [courseId] = useState(() => crypto.randomUUID());
+    const [thumbnailUrl, setThumbnailUrl] = useState("");
 
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const formData = new FormData(e.currentTarget);
+        formData.append("id", courseId);
+        if (thumbnailUrl) {
+            formData.append("thumbnailUrl", thumbnailUrl);
+        }
         
         startTransition(async () => {
             // We pass null as prevState because we are calling it directly instead of useFormState
@@ -54,15 +63,29 @@ export default function CreateCourseForm({ role }: { role: "admin" | "tutor" }) 
                 />
             </div>
             
-            {/* Note: Thumbnail upload and Class Levels / Tutors assignment are done in the Edit page (Course Builder) */}
+            <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-md">
+                <ThumbnailUpload
+                    courseId={courseId}
+                    currentThumbnailUrl={thumbnailUrl}
+                    onUploadSuccess={(path) => setThumbnailUrl(path)}
+                />
+            </div>
+
             <div className="bg-blue-50 text-blue-800 p-4 rounded-md mb-6 text-sm">
-                <p><strong>Catatan:</strong> Setelah kursus dibuat, Anda akan diarahkan ke halaman Course Builder untuk mengunggah thumbnail, mengatur tingkatan kelas, dan menyusun materi.</p>
+                <p><strong>Catatan:</strong> Setelah kursus dibuat, Anda akan diarahkan ke halaman Course Builder untuk mengatur tingkatan kelas, pengajar, dan menyusun materi.</p>
             </div>
 
             <div className="flex gap-4">
                 <button
                     type="button"
-                    onClick={() => router.back()}
+                    onClick={async () => {
+                        if (thumbnailUrl) {
+                            const supabase = createClient();
+                            const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
+                            await supabase.storage.from(STORAGE_BUCKET).remove([thumbnailUrl]);
+                        }
+                        router.back();
+                    }}
                     className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium"
                 >
                     Batal

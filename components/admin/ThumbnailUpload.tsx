@@ -7,11 +7,11 @@ import { institutionConfig } from "@/config/institution";
 
 const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
 
-export default function ThumbnailUpload({ 
-    courseId, 
+export default function ThumbnailUpload({
+    courseId,
     currentThumbnailUrl,
-    onUploadSuccess 
-}: { 
+    onUploadSuccess
+}: {
     courseId: string;
     currentThumbnailUrl?: string;
     onUploadSuccess: (path: string) => void;
@@ -19,9 +19,9 @@ export default function ThumbnailUpload({
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState("");
     const supabase = createClient();
-    
+
     // Construct full URL for preview
-    const fullImageUrl = currentThumbnailUrl 
+    const fullImageUrl = currentThumbnailUrl
         ? supabase.storage.from(STORAGE_BUCKET).getPublicUrl(currentThumbnailUrl).data.publicUrl
         : null;
 
@@ -36,9 +36,9 @@ export default function ThumbnailUpload({
             return;
         }
 
-        // Validasi ukuran file (Max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            setUploadError("Ukuran file maksimal adalah 5MB.");
+        // Validasi ukuran file (Max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setUploadError("Ukuran file maksimal adalah 2MB.");
             return;
         }
 
@@ -48,7 +48,12 @@ export default function ThumbnailUpload({
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `courses/${courseId}/thumbnail/${crypto.randomUUID()}.${fileExt}`;
-            
+
+            // Hapus thumbnail lama jika ada
+            if (currentThumbnailUrl) {
+                await supabase.storage.from(STORAGE_BUCKET).remove([currentThumbnailUrl]);
+            }
+
             const { data, error } = await supabase.storage
                 .from(STORAGE_BUCKET)
                 .upload(fileName, file);
@@ -71,21 +76,21 @@ export default function ThumbnailUpload({
             <label className="block text-sm font-medium text-slate-700 mb-2">
                 Thumbnail Kursus
             </label>
-            
+
             {fullImageUrl && (
                 <div className="mb-4 relative w-full max-w-sm aspect-video rounded-md overflow-hidden border border-slate-200">
-                    <Image 
-                        src={fullImageUrl} 
-                        alt="Course Thumbnail" 
-                        fill 
+                    <Image
+                        src={fullImageUrl}
+                        alt="Course Thumbnail"
+                        fill
                         className="object-cover"
                         unoptimized
                     />
                 </div>
             )}
 
-            <input 
-                type="file" 
+            <input
+                type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
                 disabled={isUploading}
