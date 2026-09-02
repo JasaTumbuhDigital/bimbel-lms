@@ -1,11 +1,15 @@
 # Technical Spec Document (TSD)
 ## Fitur: Course & Content Module
 
-**Versi:** 1.2
-**Tanggal:** 25 Agustus 2026
-**Terkait dokumen:** PRD.md (v2.2) · SDD.md (v1.1) · Implementation-Plan.md (v2.4, Fase 2) · TSD-Auth-ClassLevel.md (v1.0, dependency)
+**Versi:** 1.4
+**Tanggal:** 2 September 2026
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.3) · Implementation-Plan.md (v2.5, Fase 2) · TSD-Auth-ClassLevel.md (v1.0, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah)
 **Scope Implementation Plan:** Fase 2 (Modul Kursus & Materi)
 
+> **Ringkasan perubahan v1.4:** Revert perubahan v1.3 — kuis dipindah relasinya dari Lesson ke **Module** (lihat TSD-Quiz.md v3.0), dan sifatnya murni informational (badge status, tidak menggerbang apa pun). Karena itu, `markLessonComplete`/`unmarkLessonComplete` (§7.1) **kembali ke logic aslinya sepenuhnya manual**, tanpa guard atau ketergantungan ke kuis. Modul ini sekarang hanya perlu tahu bahwa Course Builder & halaman detail kursus punya 1 elemen UI tambahan (badge kuis modul) yang datanya sepenuhnya dikelola TSD-Quiz.md — bukan lagi dependency dua arah.
+>
+> **Ringkasan perubahan v1.3 (di-revert):** ~~`markLessonComplete` dapat guard untuk lesson berkuis~~ — tidak jadi dipakai, lihat v1.4 di atas.
+>
 > **Ringkasan perubahan v1.2:** FR-10 (lesson tipe dokumen PDF/PPT + preview) **dikembalikan ke Tier 1** — dibangun dengan skema awal (Google Docs Viewer untuk preview PPT/PPTX, native iframe untuk PDF). Library khusus (`@cyntler/react-doc-viewer`, dst) dicatat sebagai opsi upgrade **jika ada permintaan klien** (custom quote/Tier 2), bukan solusi default. Lihat §6.
 >
 > **Ringkasan perubahan v1.1:** Enrollment tidak lagi otomatis diam-diam saat siswa buka detail kursus — sekarang lewat **tombol "Enroll" eksplisit**, konten lesson terkunci (preview judul saja) sampai siswa enroll.
@@ -679,7 +683,7 @@ const markLessonSchema = z.object({
 - Form info dasar kursus (title, description, thumbnail)
 - **Section tingkatan** (khusus admin — tutor tidak melihat/mengedit section ini sesuai FR-40 hak admin): multi-select checkbox daftar `class_levels` + toggle terpisah "Berlaku untuk Semua Tingkatan" (kalau toggle ini aktif, multi-select checkbox di-disable secara visual)
 - **Section tutor pengampu** (khusus admin): multi-select tutor dari daftar `tutor_profiles`, dengan tag/chip yang bisa dihapus (unassign)
-- **Section modul & lesson** (admin & tutor pemilik): drag-and-drop reorder (memanggil `reorderModules`/`reorderLessons`), tombol tambah modul/lesson — form lesson punya pilihan tipe konten (Video atau Dokumen); jika Video, field URL YouTube; jika Dokumen, komponen upload file (memanggil `uploadDocument`, §6.3)
+- **Section modul & lesson** (admin & tutor pemilik): drag-and-drop reorder (memanggil `reorderModules`/`reorderLessons`), tombol tambah modul/lesson — form lesson punya pilihan tipe konten (Video atau Dokumen); jika Video, field URL YouTube; jika Dokumen, komponen upload file (memanggil `uploadDocument`, §6.3). Tiap modul juga punya slot **"Kelola Kuis Modul"** di bagian bawah daftar lesson-nya — detail builder & data sepenuhnya di TSD-Quiz.md, dokumen ini hanya menyediakan slot UI-nya
 - Tombol "Publish" — jika validasi §4.3 gagal, tampilkan pesan error tepat di section tingkatan (bukan toast generik), supaya admin langsung tahu apa yang perlu dilengkapi
 
 ### 8.3 Siswa — `/student/courses` (Listing)
@@ -688,7 +692,7 @@ const markLessonSchema = z.object({
 
 ### 8.4 Siswa — `/student/courses/[id]` (Detail & Belajar)
 - **Belum enroll (`isEnrolled = false`):** tampilkan info kursus (judul, deskripsi, thumbnail), struktur modul → lesson sebagai **daftar judul saja** (terkunci, ikon gembok, tidak bisa diklik), tombol besar **"Enroll"** yang memanggil `enrollInCourse` (§5.2b) lalu re-fetch halaman
-- **Sudah enroll (`isEnrolled = true`):** struktur modul → lesson penuh (accordion/expandable list). Per lesson: jika `video`, embed YouTube iframe standar (`https://www.youtube.com/embed/{videoId}`); jika `document`, tampilkan preview sesuai §6.4. Tombol "Tandai Selesai" / "Batalkan Tanda Selesai" (toggle, state dari `lesson_progress` yang sudah di-include di query §5.2), progress bar ringkas di header (jumlah lesson selesai / total lesson dalam course)
+- **Sudah enroll (`isEnrolled = true`):** struktur modul → lesson penuh (accordion/expandable list). Per lesson: jika `video`, embed YouTube iframe standar (`https://www.youtube.com/embed/{videoId}`); jika `document`, tampilkan preview sesuai §6.4. Tombol "Tandai Selesai" / "Batalkan Tanda Selesai" (toggle, state dari `lesson_progress` yang sudah di-include di query §5.2), progress bar ringkas di header (jumlah lesson selesai / total lesson dalam course — **tidak** menghitung status kuis modul, itu badge terpisah, lihat TSD-Quiz.md §7.3). Kalau modul punya kuis, badge status kuis (Belum dikerjakan/Belum lulus/Lulus) tampil di bawah daftar lesson modul itu, murni informasional — tidak mempengaruhi akses lesson mana pun
 - Tidak ada tombol "Un-enroll" di Tier 1 — sekali enroll, tetap enroll (selaras A2, tidak ada mekanisme keluar dari kursus)
 
 ### 8.5 Tutor — `/tutor/courses` (Listing Scoped)
@@ -723,6 +727,7 @@ const markLessonSchema = z.object({
 | YouTube (embed iframe biasa) | Video materi, tanpa API key di Tier 1 |
 | `prisma` | Transaksi batch untuk `reorderModules`/`reorderLessons`, upsert untuk `enrollments`/`lesson_progress` |
 | TSD-Auth-ClassLevel.md | `getAccessibleCourseFilter` helper, model `User`/`StudentProfile`/`ClassLevel` |
+| TSD-Quiz.md (v3.0, dependency ringan satu arah) | TSD-Quiz.md butuh model `Module`, `Course`, `Enrollment`, pola `canManageCourse` dari dokumen ini — tapi **tidak sebaliknya**: dokumen ini tidak butuh apa pun dari TSD-Quiz.md. Course Builder (§8.2) & halaman detail kursus (§8.4) cukup menyediakan 1 slot UI per modul untuk badge status kuis, datanya sepenuhnya dikelola TSD-Quiz.md |
 
 ---
 

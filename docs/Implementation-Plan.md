@@ -1,11 +1,15 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.3
-**Tanggal:** 25 Agustus 2026
-**Terkait dokumen:** PRD.md (v2.2), SDD.md (v1.1)
+**Versi:** 2.5
+**Tanggal:** 2 September 2026
+**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.3)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.5:** Fase 3 (Kuis) — relasi kuis dipindah dari per-lesson jadi **per-modul** (sejajar dengan lesson sebagai sub-materi). Kelulusan kuis dipertegas **murni informasional**, tidak lagi otomatis mengisi `lesson_progress` — revisi kecil yang sempat dibutuhkan di Fase 2 (`markLessonComplete`) jadi tidak perlu, Fase 2 & 3 sekarang independen satu arah.
+>
+> **Ringkasan perubahan v2.4:** Fase 3 (Kuis) dirombak — jadi post-test per lesson dengan passing grade (bukan modul ujian berdiri sendiri dengan riwayat percobaan), kelulusan otomatis menandai lesson selesai. Draft desain awal yang ternyata lebih cocok untuk "ujian standalone" dipindah jadi kandidat backlog baru di Fase 11.
+>
 > **Ringkasan perubahan v2.3:** FR-10 (lesson tipe dokumen PDF/PPT + preview) dikonfirmasi **tetap di Fase 2/Tier 1** (Google Docs Viewer sebagai skema awal) — sempat dipertimbangkan pindah ke Tier 2 tapi dibatalkan. Library rendering khusus dicatat sebagai opsi upgrade opsional di Fase 11, bukan fitur terpisah.
 >
 > **Ringkasan perubahan v2.2:** Fase 1 & Fase 2 disesuaikan mengikuti SDD v1.1 — relasi kelas↔kursus jadi many-to-many + flag eksplisit, kepemilikan kursus oleh tutor jadi many-to-many (co-teaching), plus scoping akses tutor terbatas ke kursus miliknya (FR-40, FR-41 baru di PRD).
@@ -120,16 +124,17 @@
 
 ---
 
-### Fase 3 — Kuis
-**Tujuan:** Siswa uji pemahaman dengan penilaian otomatis. Flow lengkap: SDD §6.3.
+### Fase 3 — Kuis (Post-Test per Modul)
+**Tujuan:** Siswa uji pemahaman lewat post-test pilihan ganda per modul (sejajar dengan lesson sebagai sub-materi), dengan passing grade sebagai ambang. Status kelulusan **murni informasional** (badge), tidak menggerbang apa pun. Detail lengkap: TSD-Quiz.md v3.0 (menggantikan pendekatan "riwayat percobaan penuh" di draft awal — lihat TSD-Exam-Standalone-DRAFT.md, dipindah jadi kandidat Fase 11).
 
-- [ ] Skema & builder kuis pilihan ganda (admin/tutor)
-- [ ] Siswa: kerjakan kuis, submit, lihat skor
-- [ ] Riwayat percobaan kuis (skor final = tertinggi, default per FR-12)
+- [ ] Skema & builder kuis pilihan ganda per modul (admin/tutor), 1 modul maksimal 1 kuis, field passing grade (default 70%)
+- [ ] Siswa: kerjakan kuis, submit, lihat skor & status lulus per percobaan
+- [ ] Status kuis (lulus/skor terbaik) tersimpan sebagai 1 row agregat per siswa per kuis — bukan riwayat kronologis tiap percobaan
+- [ ] Badge status kuis modul tampil di halaman detail kursus, murni informasional — **tidak** mengubah tombol "Tandai Selesai" lesson, **tidak** ikut dihitung ke progress bar kursus, **tidak** mengunci modul berikutnya
 
-**Output:** Modul kuis end-to-end.
+**Output:** Modul kuis end-to-end, independen (satu arah) dari modul progress tracking Fase 2.
 
-**Terkait:** FR-11, FR-12 · SDD §6.3
+**Terkait:** FR-11, FR-12 · TSD-Quiz.md v3.0
 
 ---
 
@@ -204,10 +209,11 @@ Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, d
 ### Fase 11 — Konten & Interaksi Lanjutan
 - Sertifikat otomatis (@react-pdf/renderer)
 - Forum Q&A per kursus
-- Kuis dengan timer & pembahasan otomatis
+- Kuis (post-test modul, Fase 3) dengan timer & pembahasan otomatis — FR-13
+- **Modul Ujian/Exam standalone (FR-11b, kandidat baru)** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, kemungkinan benar-benar menggerbang kelulusan kursus untuk kebutuhan sertifikasi. Draft teknis awal sudah ada: **TSD-Exam-Standalone-DRAFT.md** (perlu direvisit total sebelum dipakai — ditulis dengan asumsi lama sebelum Fase 3 dirombak jadi post-test ringan). Belum diprioritaskan vs fitur Fase 11 lain, evaluasi bareng saat fase ini mulai dikerjakan.
 - *(Opsional, jika ada permintaan klien)* Upgrade preview dokumen dari Google Docs Viewer ke library khusus — `@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, atau `pptx-glimpse` — evaluasi saat kebutuhan itu muncul, bukan default
 
-**Terkait FR:** FR-13, FR-27, FR-28
+**Terkait FR:** FR-13, FR-27, FR-28, FR-11b
 
 ### Fase 12 — Analytics & Gamifikasi
 - Dashboard admin: revenue tracking, laporan bisnis
