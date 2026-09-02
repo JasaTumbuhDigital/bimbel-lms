@@ -84,9 +84,9 @@ export async function createCourseAction(
  * 3. Action Arsip Kursus (Soft Delete)
  */
 export async function archiveCourseAction(courseId: string): Promise<ActionResult> {
-    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
-    if (!success) {
-        return { success: false, error: error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat menghapus kursus." };
+    const accessResult = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!accessResult.success) {
+        return { success: false, error: accessResult.error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat menghapus kursus." };
     }
 
     try {
@@ -114,9 +114,9 @@ export async function updateCourseAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const { success, error } = await verifyCourseAccess(courseId, true); // true = requires Owner
-    if (!success) {
-        return { success: false, error: error || "Akses ditolak." };
+    const accessResult = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!accessResult.success) {
+        return { success: false, error: accessResult.error || "Akses ditolak." };
     }
 
     const title = formData.get("title") as string;
@@ -162,10 +162,11 @@ export async function updateCourseAccessAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const { success, error, course } = await verifyCourseAccess(courseId, true); // true = requires Owner
-    if (!success || !course) {
-        return { success: false, error: error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat mengatur akses kursus." };
+    const accessResult = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!accessResult.success) {
+        return { success: false, error: accessResult.error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat mengatur akses kursus." };
     }
+    const course = accessResult.course;
 
     const rawClassLevelIds = formData.getAll("classLevelIds") as string[];
     const rawTutorProfileIds = formData.getAll("tutorProfileIds") as string[];
