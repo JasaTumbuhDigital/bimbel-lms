@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getPublicUrl } from "@/lib/supabase-storage";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { institutionConfig } from "@/config/institution";
@@ -21,9 +22,7 @@ export default function ThumbnailUpload({
     const supabase = createClient();
 
     // Construct full URL for preview
-    const fullImageUrl = currentThumbnailUrl
-        ? supabase.storage.from(STORAGE_BUCKET).getPublicUrl(currentThumbnailUrl).data.publicUrl
-        : null;
+    const fullImageUrl = getPublicUrl(currentThumbnailUrl || null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

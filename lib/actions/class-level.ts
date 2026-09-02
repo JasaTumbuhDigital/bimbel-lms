@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+
 import { prisma } from "@/lib/prisma";
 import { classLevelSchema } from "@/lib/validations/class-level";
 
@@ -39,34 +39,29 @@ export async function createClassLevelAction(
 
     const { name, description, isDefault } = validation.data;
 
-    // Cek keunikan nama kelas
-    const existing = await prisma.classLevel.findUnique({
-        where: { name },
-    });
-
-    if (existing) {
-        return { success: false, error: `Tingkatan kelas dengan nama "${name}" sudah ada.` };
-    }
-
     try {
-        // Jika isDefault true, matikan status isDefault pada kelas lain
-        if (isDefault) {
-            await prisma.classLevel.updateMany({
-                data: { isDefault: false },
+        await prisma.$transaction(async (tx) => {
+            if (isDefault) {
+                await tx.classLevel.updateMany({
+                    data: { isDefault: false },
+                });
+            }
+            await tx.classLevel.create({
+                data: {
+                    name,
+                    description,
+                    isDefault,
+                },
             });
-        }
-
-        await prisma.classLevel.create({
-            data: {
-                name,
-                description,
-                isDefault,
-            },
         });
 
         revalidatePath("/admin/class-levels");
         return { success: true, message: `Tingkatan kelas "${name}" berhasil ditambahkan.` };
     } catch (error) {
+        const dbError = error as { code?: string };
+        if (dbError.code === "P2002") {
+            return { success: false, error: `Tingkatan kelas dengan nama "${name}" sudah ada.` };
+        }
         return { success: false, error: "Gagal menyimpan tingkatan kelas ke database." };
     }
 }
@@ -99,7 +94,7 @@ export async function deleteClassLevelAction(id: string): Promise<ActionResult> 
 
         revalidatePath("/admin/class-levels");
         return { success: true, message: "Tingkatan kelas berhasil dihapus." };
-    } catch (error) {
+    } catch {
         return { success: false, error: "Gagal menghapus tingkatan kelas dari database." };
     }
 }

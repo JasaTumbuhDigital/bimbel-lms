@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { markLessonCompleteAction } from "@/lib/actions/progress";
 import { useRouter } from "next/navigation";
 
@@ -24,7 +25,7 @@ export default function MarkAsDoneButton({
         startTransition(async () => {
             const res = await markLessonCompleteAction(lessonId, courseId);
             if (!res.success) {
-                alert(res.error);
+                toast.error(res.error);
             } else if (nextLessonUrl) {
                 router.push(nextLessonUrl);
             }

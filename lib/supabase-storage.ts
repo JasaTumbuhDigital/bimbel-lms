@@ -1,29 +1,14 @@
-import { createClient } from "@/utils/supabase/server";
 import { institutionConfig } from "@/config/institution";
 
 export const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
 
 /**
- * Menghapus file dari Supabase Storage tunggal aplikasi.
- * 
- * @param path - Path file di storage (misal: "courses/course-id/documents/uuid-filename.pdf")
+ * Mendapatkan URL publik untuk file di Supabase Storage secara sinkron
  */
-export async function deleteFileFromStorage(path: string): Promise<boolean> {
-    if (!path) return false;
-    
-    try {
-        const supabase = await createClient();
-        
-        const { error } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
-        
-        if (error) {
-            console.error(`Gagal menghapus file dari bucket ${STORAGE_BUCKET}:`, error.message);
-            return false;
-        }
-        
-        return true;
-    } catch (error) {
-        console.error("Exception saat menghapus file storage:", error);
-        return false;
-    }
+export function getPublicUrl(path: string | null): string | null {
+    if (!path) return null;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) return null;
+    return `${supabaseUrl}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
 }
+

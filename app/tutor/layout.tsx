@@ -1,28 +1,13 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/data/auth";
 
 export default async function TutorLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const supabase = await createClient();
-    const {
-        data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) {
-        redirect("/login");
-    }
-
-    const dbUser = await prisma.user.findUnique({
-        where: { authId: authUser.id },
-    });
-
-    if (!dbUser || !dbUser.isActive) {
-        redirect("/login");
-    }
+    const dbUser = await getAuthenticatedUser();
+    if (!dbUser) redirect("/login");
 
     // Hanya tutor dan admin yang boleh berada di sini
     if (dbUser.role !== "tutor" && dbUser.role !== "admin") {

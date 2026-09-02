@@ -14,7 +14,21 @@ export async function getClassLevels() {
             },
         });
         return classLevels;
-    } catch (error) {
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Fetch Tingkatan Kelas untuk Dropdown
+ */
+export async function getClassLevelsForSelect() {
+    try {
+        return await prisma.classLevel.findMany({
+            select: { id: true, name: true },
+            orderBy: { name: "asc" }
+        });
+    } catch {
         return [];
     }
 }

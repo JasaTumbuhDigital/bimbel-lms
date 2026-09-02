@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition, useState } from "react";
+import { toast } from "sonner";
 import { deleteClassLevelAction } from "@/lib/actions/class-level";
 
 export default function DeleteClassLevelButton({
@@ -17,7 +18,7 @@ export default function DeleteClassLevelButton({
 
   const handleDelete = () => {
     if (studentCount > 0) {
-      alert(
+      toast(
         `Gagal menghapus! Masih terdapat ${studentCount} siswa aktif yang terdaftar di tingkatan kelas "${name}". Pindahkan siswa ke kelas lain terlebih dahulu.`
       );
       return;

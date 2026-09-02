@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { getAllCoursesForPreview } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
+import { getPublicUrl } from "@/lib/supabase-storage";
 import { redirect } from "next/navigation";
 import Image from "next/image";
-import { createClient } from "@/utils/supabase/server";
-import { institutionConfig } from "@/config/institution";
 
 export const metadata = {
     title: "Eksplorasi Kursus - Tutor",
@@ -17,8 +16,7 @@ export default async function TutorExplorePage() {
     }
 
     const courses = await getAllCoursesForPreview();
-    const supabase = await createClient();
-    const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
+
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
@@ -47,9 +45,7 @@ export default async function TutorExplorePage() {
                         {courses.map((course) => {
                             const isMyCourse = course.tutors.some(t => t.tutorProfileId === user.tutorProfile?.id);
                             
-                            const fullImageUrl = course.thumbnailUrl 
-                                ? supabase.storage.from(STORAGE_BUCKET).getPublicUrl(course.thumbnailUrl).data.publicUrl
-                                : null;
+                            const fullImageUrl = getPublicUrl(course.thumbnailUrl || null);
 
                             return (
                                 <Link 

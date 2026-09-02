@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { enrollCourseAction } from "@/lib/actions/enrollment";
 
 export default function EnrollButton({ courseId }: { courseId: string }) {
@@ -10,7 +11,7 @@ export default function EnrollButton({ courseId }: { courseId: string }) {
         startTransition(async () => {
             const res = await enrollCourseAction(courseId);
             if (!res.success) {
-                alert(res.error);
+                toast.error(res.error);
             }
             // Jika sukses, halaman akan terefresh otomatis via revalidatePath
         });

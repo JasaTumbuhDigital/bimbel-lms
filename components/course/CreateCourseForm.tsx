@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createCourseAction } from "@/lib/actions/course";
 import ThumbnailUpload from "@/components/ui/ThumbnailUpload";
@@ -26,10 +27,10 @@ export default function CreateCourseForm({ role }: { role: "admin" | "tutor" }) 
             // wait, createCourseAction expects (prevState, formData).
             const result = await createCourseAction(null, formData);
             if (result.success && result.data && (result.data as any).id) {
-                alert(result.message);
+                toast.success(result.message);
                 router.push(`/${role}/courses/${(result.data as any).id}/edit`);
             } else {
-                alert(result.error || "Gagal membuat kursus.");
+                toast.error(result.error || "Gagal membuat kursus.");
             }
         });
     };

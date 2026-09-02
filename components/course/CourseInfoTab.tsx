@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateCourseAction } from "@/lib/actions/course";
 import ThumbnailUpload from "@/components/ui/ThumbnailUpload";
 
@@ -18,9 +19,9 @@ export default function CourseInfoTab({ course, role }: { course: any, role: "ad
         startTransition(async () => {
             const result = await updateCourseAction(course.id, null, formData);
             if (result.success) {
-                alert(result.message);
+                toast.success(result.message);
             } else {
-                alert(result.error);
+                toast.error(result.error);
             }
         });
     };

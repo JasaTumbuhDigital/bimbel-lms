@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { deleteLessonAction, updateLessonAction } from "@/lib/actions/module";
@@ -33,7 +34,7 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
         startTransition(async () => {
             const res = await deleteLessonAction(lesson.id);
             if (!res.success) {
-                alert(res.error);
+                toast.error(res.error);
             }
         });
     };
@@ -42,7 +43,7 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
         e.preventDefault();
 
         if (contentType === "document" && !fileUrl) {
-            alert("Silakan unggah dokumen terlebih dahulu.");
+            toast("Silakan unggah dokumen terlebih dahulu.");
             return;
         }
 
@@ -59,7 +60,7 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
             if (res.success) {
                 setIsEditing(false);
             } else {
-                alert(res.error || res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error");
+                toast.error(res.error || res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error");
             }
         });
     };
