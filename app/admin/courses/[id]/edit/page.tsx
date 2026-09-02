@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
-import { prisma } from "@/lib/prisma";
+import { getClassLevelsForSelect } from "@/lib/data/class-level";
+import { getTutorsForSelect } from "@/lib/data/user";
 import CourseBuilder from "@/components/course/CourseBuilder";
 
-export const metadata = {
-    title: "Edit Kursus - Admin",
-};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    return { title: "Edit Kursus - Admin" };
+}
 
 export default async function AdminEditCoursePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -15,11 +16,8 @@ export default async function AdminEditCoursePage(props: { params: Promise<{ id:
         notFound();
     }
 
-    const classLevels = await prisma.classLevel.findMany({ orderBy: { name: "asc" } });
-    const tutors = await prisma.tutorProfile.findMany({
-        include: { user: true },
-        orderBy: { user: { name: "asc" } }
-    });
+    const classLevels = await getClassLevelsForSelect();
+    const tutors = await getTutorsForSelect();
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">

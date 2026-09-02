@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
+import { getPublicUrl } from "@/lib/supabase-storage";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
-import { institutionConfig } from "@/config/institution";
 
 export const metadata = {
     title: "Preview Materi Eksplorasi - Tutor",
@@ -61,12 +60,11 @@ export default async function TutorExploreCoursePlayerPage(props: { params: Prom
     const prevLesson = flatIndex > 0 ? allLessons[flatIndex - 1] : null;
     const nextLesson = flatIndex < allLessons.length - 1 ? allLessons[flatIndex + 1] : null;
 
-    const supabase = await createClient();
-    const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
+
 
     let documentEmbedUrl = "";
     if (currentLesson.contentType === "document" && currentLesson.documentUrl) {
-        const fullUrl = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(currentLesson.documentUrl).data.publicUrl;
+        const fullUrl = getPublicUrl(currentLesson.documentUrl) || "";
         documentEmbedUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
     }
 

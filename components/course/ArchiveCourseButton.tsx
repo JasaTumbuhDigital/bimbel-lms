@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { archiveCourseAction } from "@/lib/actions/course";
 
 export default function ArchiveCourseButton({ courseId }: { courseId: string }) {
@@ -12,7 +13,7 @@ export default function ArchiveCourseButton({ courseId }: { courseId: string }) 
         startTransition(async () => {
             const result = await archiveCourseAction(courseId);
             if (!result.success) {
-                alert(result.error);
+                toast.error(result.error);
             }
         });
     };

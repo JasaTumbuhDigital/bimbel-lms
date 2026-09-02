@@ -1,29 +1,13 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/data/auth";
 
 export default async function StudentLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const supabase = await createClient();
-    const {
-        data: { user: authUser },
-    } = await supabase.auth.getUser();
-
-    if (!authUser) {
-        redirect("/login");
-    }
-
-    const dbUser = await prisma.user.findUnique({
-        where: { authId: authUser.id },
-        include: { studentProfile: true },
-    });
-
-    if (!dbUser || !dbUser.isActive) {
-        redirect("/login");
-    }
+    const dbUser = await getAuthenticatedUser();
+    if (!dbUser) redirect("/login");
 
     // Jika siswa belum mengganti password default -> paksa ke /change-password
     if (dbUser.role === "student" && dbUser.studentProfile?.mustChangePassword) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateCourseAccessAction } from "@/lib/actions/course";
 
 export default function CourseAccessTab({ 
@@ -49,9 +50,9 @@ export default function CourseAccessTab({
 
             const res = await updateCourseAccessAction(course.id, null, formData);
             if (res.success) {
-                alert(res.message);
+                toast.success(res.message);
             } else {
-                alert(res.error);
+                toast.error(res.error);
             }
         });
     };

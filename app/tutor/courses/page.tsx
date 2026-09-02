@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getCourses } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
-import { prisma } from "@/lib/prisma";
 import ArchiveCourseButton from "@/components/course/ArchiveCourseButton";
 
 export const metadata = {
@@ -12,12 +11,7 @@ export default async function TutorCoursesPage() {
     const courses = await getCourses();
     const user = await getAuthenticatedUser();
     const userId = user?.id;
-    
-    let tutorProfileId: string | null = null;
-    if (userId) {
-        const profile = await prisma.tutorProfile.findUnique({ where: { userId } });
-        if (profile) tutorProfileId = profile.id;
-    }
+    const tutorProfileId = user?.tutorProfile?.id ?? null;
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">

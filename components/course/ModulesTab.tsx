@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
     DndContext,
@@ -55,7 +56,7 @@ export default function ModulesTab({ course }: { course: any }) {
             const orderedIds = newOrderedModules.map((m: any) => m.id);
             const res = await reorderModulesAction(course.id, orderedIds);
             if (!res.success) {
-                alert(res.error || "Gagal mengubah urutan");
+                toast.error(res.error || "Gagal mengubah urutan");
                 setModules(modules); // revert
             }
         });
@@ -75,7 +76,7 @@ export default function ModulesTab({ course }: { course: any }) {
                 setNewModuleTitle("");
                 setIsAddingModule(false);
             } else {
-                alert(res.error || (res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error"));
+                toast.error(res.error || (res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error"));
             }
         });
     };

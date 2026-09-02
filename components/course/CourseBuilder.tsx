@@ -4,6 +4,9 @@ import { useState } from "react";
 import CourseInfoTab from "./CourseInfoTab";
 import ModulesTab from "./ModulesTab";
 import CourseAccessTab from "./CourseAccessTab";
+import { Course, ClassLevel, TutorProfile, User } from "@prisma/client";
+
+type TutorWithUser = TutorProfile & { user: User };
 
 export default function CourseBuilder({
     course,
@@ -15,8 +18,8 @@ export default function CourseBuilder({
     course: any,
     role: "admin" | "tutor",
     isOwner?: boolean,
-    availableClassLevels?: any[],
-    availableTutors?: any[]
+    availableClassLevels?: ClassLevel[] | { id: string, name: string }[],
+    availableTutors?: TutorWithUser[] | { id: string, user: { id: string, name: string } }[]
 }) {
     const hasFullAccess = role === "admin" || isOwner;
     const [activeTab, setActiveTab] = useState<"info" | "modules" | "settings">("modules");

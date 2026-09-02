@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { toast } from "sonner";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -82,7 +83,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
             const orderedIds = newOrdered.map((l: any) => l.id);
             const res = await reorderLessonsAction(module.id, orderedIds);
             if (!res.success) {
-                alert(res.error);
+                toast.error(res.error);
                 setLessons(lessons);
             }
         });
@@ -92,7 +93,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         e.preventDefault();
 
         if (contentType === "document" && !fileUrl) {
-            alert("Silakan unggah dokumen terlebih dahulu.");
+            toast("Silakan unggah dokumen terlebih dahulu.");
             return;
         }
 
@@ -112,7 +113,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                 setFileUrl("");
                 setIsAddingLesson(false);
             } else {
-                alert(res.error || res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error");
+                toast.error(res.error || res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error");
             }
         });
     };
@@ -142,7 +143,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
             if (res.success) {
                 setIsEditingModule(false);
             } else {
-                alert(res.error);
+                toast.error(res.error);
             }
         });
     };
@@ -152,7 +153,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         startTransition(async () => {
             const res = await deleteModuleAction(module.id);
             if (!res.success) {
-                alert(res.error);
+                toast.error(res.error);
             }
         });
     };

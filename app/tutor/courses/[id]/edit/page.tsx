@@ -3,11 +3,12 @@ import { getCourseById } from "@/lib/data/course";
 import CourseBuilder from "@/components/course/CourseBuilder";
 
 import { getAuthenticatedUser } from "@/lib/data/auth";
-import { prisma } from "@/lib/prisma";
+import { getClassLevelsForSelect } from "@/lib/data/class-level";
+import { getTutorsForSelect } from "@/lib/data/user";
 
-export const metadata = {
-    title: "Kelola Kursus - Tutor",
-};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+    return { title: "Kelola Kursus - Tutor" };
+}
 
 export default async function TutorEditCoursePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
@@ -25,8 +26,8 @@ export default async function TutorEditCoursePage(props: { params: Promise<{ id:
     
     // Jika owner, ia berhak mengubah setting (perlu data class levels dan tutors)
     if (isOwner) {
-        availableClassLevels = await prisma.classLevel.findMany({ orderBy: { name: "asc" } });
-        availableTutors = await prisma.tutorProfile.findMany({ include: { user: true } });
+        availableClassLevels = await getClassLevelsForSelect();
+        availableTutors = await getTutorsForSelect();
     }
 
     return (

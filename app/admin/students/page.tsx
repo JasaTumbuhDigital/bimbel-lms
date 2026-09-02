@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getStudents } from "@/lib/data/auth";
+import { getStudents } from "@/lib/data/user";
 import { getClassLevels } from "@/lib/data/class-level";
 import StudentRowActions from "@/components/users/StudentRowActions";
 

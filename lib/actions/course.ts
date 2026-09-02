@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { courseSchema } from "@/lib/validations/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
-import { deleteFileFromStorage } from "@/lib/supabase-storage";
+import { deleteFileFromStorage } from "@/lib/supabase-storage-server";
+import { verifyCourseAccess } from "@/lib/data/course-access";
 
 /**
  * 1. Action Tambah Kursus Baru (Admin & Tutor)
@@ -77,71 +78,7 @@ export async function createCourseAction(
     }
 }
 
-/**
- * 2. Action Siswa Enroll Kursus Eksplisit
- * - Dilengkapi validasi kelayakan kursus & tingkatan kelas siswa
- */
-export async function enrollInCourseAction(courseId: string): Promise<ActionResult> {
-    const user = await getAuthenticatedUser();
-    if (!user || user.role !== "student" || !user.studentProfile) {
-        return { success: false, error: "Hanya siswa aktif yang dapat mendaftar kursus." };
-    }
 
-    const studentId = user.studentProfile.id;
-    const studentClassLevelId = user.studentProfile.classLevelId;
-
-    try {
-        // Fetch kursus untuk cek kelayakan
-        const course = await prisma.course.findUnique({
-            where: { id: courseId },
-            include: { classLevels: true },
-        });
-
-        if (!course || !course.isPublished || course.isArchived) {
-            return { success: false, error: "Kursus tidak ditemukan atau belum dipublikasikan." };
-        }
-
-        // Cek kelayakan tingkatan kelas
-        const isEligible =
-            course.visibleToAllLevels ||
-            course.classLevels.some((cl) => cl.classLevelId === studentClassLevelId);
-
-        if (!isEligible) {
-            return {
-                success: false,
-                error: "Maaf, kursus ini tidak dapat didaftar oleh tingkatan kelas kamu.",
-            };
-        }
-
-        // Cek apakah sudah ter-enroll sebelumnya
-        const existing = await prisma.enrollment.findUnique({
-            where: {
-                studentId_courseId: {
-                    studentId,
-                    courseId,
-                },
-            },
-        });
-
-        if (existing) {
-            return { success: true, message: "Kamu sudah terdaftar di kursus ini." };
-        }
-
-        await prisma.enrollment.create({
-            data: {
-                studentId,
-                courseId,
-            },
-        });
-
-        revalidatePath(`/courses/${courseId}`);
-        revalidatePath("/dashboard");
-        return { success: true, message: "Berhasil mendaftar ke kursus ini!" };
-    } catch (error) {
-        console.error("Error enrollInCourseAction:", error);
-        return { success: false, error: "Gagal memproses pendaftaran kursus." };
-    }
-}
 
 /**
  * 3. Action Arsip Kursus (Soft Delete)
@@ -215,38 +152,7 @@ export async function updateCourseAction(
     }
 }
 
-/**
- * Helper: Validasi Akses Tutor terhadap Kursus
- * Jika requiresOwner = true, hanya Admin & Tutor Utama (createdBy) yang lolos.
- * Jika requiresOwner = false, Admin, Tutor Utama, dan Co-Tutor lolos.
- */
-export async function verifyCourseAccess(courseId: string, requiresOwner = false): Promise<{ success: boolean; error?: string; user?: any; course?: any }> {
-    const user = await getAuthenticatedUser();
-    if (!user) return { success: false, error: "Tidak terautentikasi" };
-    if (user.role === "admin") return { success: true, user };
-    if (user.role !== "tutor") return { success: false, error: "Akses ditolak" };
 
-    const course = await prisma.course.findUnique({
-        where: { id: courseId },
-        include: { tutors: true }
-    });
-
-    if (!course) return { success: false, error: "Kursus tidak ditemukan" };
-
-    if (requiresOwner) {
-        if (course.createdBy !== user.id) {
-            return { success: false, error: "Akses ditolak. Hanya Tutor Utama (Pembuat) yang diizinkan." };
-        }
-        return { success: true, user, course };
-    }
-
-    const isAssigned = course.tutors.some(t => t.tutorProfileId === user.tutorProfile?.id);
-    if (!isAssigned && course.createdBy !== user.id) {
-         return { success: false, error: "Akses ditolak. Anda tidak di-assign ke kursus ini." };
-    }
-
-    return { success: true, user, course };
-}
 
 /**
  * 5. Action Update Akses Kursus (Admin Only)

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthenticatedUser } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
 import { 
     createModuleSchema, 
@@ -11,18 +11,11 @@ import {
     createLessonSchema, 
     updateLessonSchema 
 } from "@/lib/validations/module";
-import { deleteFileFromStorage } from "@/lib/supabase-storage";
+import { deleteFileFromStorage } from "@/lib/supabase-storage-server";
 
-import { verifyCourseAccess } from "./course";
+import { verifyCourseAccess } from "@/lib/data/course-access";
 
-async function getAuthUserId(): Promise<string | null> {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
 
-    const dbUser = await prisma.user.findUnique({ where: { authId: user.id } });
-    return dbUser?.id || null;
-}
 
 // ==========================================
 // MODULE ACTIONS
@@ -32,7 +25,8 @@ export async function createModuleAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     const rawData = {
@@ -64,8 +58,8 @@ export async function createModuleAction(
         revalidatePath(`/admin/courses/${courseId}/edit`);
         revalidatePath(`/tutor/courses/${courseId}/edit`);
         return { success: true, message: "Modul berhasil dibuat" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
@@ -73,7 +67,8 @@ export async function updateModuleAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     const rawData = {
@@ -103,15 +98,16 @@ export async function updateModuleAction(
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
         revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
         return { success: true, message: "Modul berhasil diubah" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
 export async function deleteModuleAction(
     moduleId: string
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     try {
@@ -126,8 +122,8 @@ export async function deleteModuleAction(
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
         revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
         return { success: true, message: "Modul berhasil dihapus" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
@@ -144,7 +140,8 @@ export async function reorderModulesAction(
         return { success: false, error: "Format data urutan tidak valid." };
     }
 
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     const { success } = await verifyCourseAccess(courseId, false);
@@ -164,8 +161,8 @@ export async function reorderModulesAction(
         revalidatePath(`/admin/courses/${courseId}/edit`);
         revalidatePath(`/tutor/courses/${courseId}/edit`);
         return { success: true, message: "Urutan modul berhasil diubah" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
@@ -177,7 +174,8 @@ export async function createLessonAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     const rawData = {
@@ -222,8 +220,8 @@ export async function createLessonAction(
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
         revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
         return { success: true, message: "Materi berhasil ditambahkan" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
@@ -231,7 +229,8 @@ export async function updateLessonAction(
     prevState: ActionResult | null,
     formData: FormData
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     const rawData = {
@@ -275,15 +274,16 @@ export async function updateLessonAction(
         revalidatePath(`/admin/courses/${lessonRecord.module.courseId}/edit`);
         revalidatePath(`/tutor/courses/${lessonRecord.module.courseId}/edit`);
         return { success: true, message: "Materi berhasil diubah" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
 export async function deleteLessonAction(
     lessonId: string
 ): Promise<ActionResult> {
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     try {
@@ -306,8 +306,8 @@ export async function deleteLessonAction(
         revalidatePath(`/admin/courses/${lessonRecord.module.courseId}/edit`);
         revalidatePath(`/tutor/courses/${lessonRecord.module.courseId}/edit`);
         return { success: true, message: "Materi berhasil dihapus" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }
 
@@ -324,7 +324,8 @@ export async function reorderLessonsAction(
         return { success: false, error: "Format data urutan tidak valid." };
     }
 
-    const userId = await getAuthUserId();
+    const user = await getAuthenticatedUser();
+    const userId = user?.id;
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     try {
@@ -346,7 +347,7 @@ export async function reorderLessonsAction(
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
         revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
         return { success: true, message: "Urutan materi berhasil diubah" };
-    } catch (error: any) {
-        return { success: false, error: error.message || "Terjadi kesalahan" };
+    } catch (error) {
+        return { success: false, error: String(error) || "Terjadi kesalahan" };
     }
 }

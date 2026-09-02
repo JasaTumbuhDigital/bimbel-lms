@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
+import { getPublicUrl } from "@/lib/supabase-storage";
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
-import { institutionConfig } from "@/config/institution";
 import MarkAsDoneButton from "@/components/course/MarkAsDoneButton";
 
 export const metadata = {
@@ -70,12 +69,11 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
 
     const isCompleted = currentLesson.progress && currentLesson.progress.length > 0 && currentLesson.progress[0].isCompleted;
 
-    const supabase = await createClient();
-    const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
+
 
     let documentEmbedUrl = "";
     if (currentLesson.contentType === "document" && currentLesson.documentUrl) {
-        const fullUrl = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(currentLesson.documentUrl).data.publicUrl;
+        const fullUrl = getPublicUrl(currentLesson.documentUrl) || "";
         // Gunakan Google Docs Viewer untuk semua dokumen (PDF, PPT, DOCX) agar tampilan konsisten & clean di semua browser (Chrome, Firefox, Safari)
         documentEmbedUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
     }

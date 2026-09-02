@@ -11,35 +11,57 @@ export async function enrollCourseAction(courseId: string) {
         return { success: false, error: "Akses ditolak. Anda harus login sebagai siswa." };
     }
 
-    try {
-        const studentId = user.studentProfile.id;
+    const studentId = user.studentProfile.id;
+    const studentClassLevelId = user.studentProfile.classLevelId;
 
-        // Cek apakah sudah enroll
-        const existingEnrollment = await prisma.enrollment.findUnique({
+    try {
+        // Fetch kursus untuk cek kelayakan
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            include: { classLevels: true },
+        });
+
+        if (!course || !course.isPublished || course.isArchived) {
+            return { success: false, error: "Kursus tidak ditemukan atau belum dipublikasikan." };
+        }
+
+        // Cek kelayakan tingkatan kelas
+        const isEligible =
+            course.visibleToAllLevels ||
+            course.classLevels.some((cl) => cl.classLevelId === studentClassLevelId);
+
+        if (!isEligible) {
+            return {
+                success: false,
+                error: "Maaf, kursus ini tidak dapat didaftar oleh tingkatan kelas kamu.",
+            };
+        }
+
+        // Cek apakah sudah ter-enroll sebelumnya
+        const existing = await prisma.enrollment.findUnique({
             where: {
                 studentId_courseId: {
                     studentId,
-                    courseId
-                }
-            }
+                    courseId,
+                },
+            },
         });
 
-        if (existingEnrollment) {
-            return { success: true, message: "Anda sudah terdaftar di kursus ini." };
+        if (existing) {
+            return { success: true, message: "Kamu sudah terdaftar di kursus ini." };
         }
 
-        // Buat enrollment baru
         await prisma.enrollment.create({
             data: {
                 studentId,
-                courseId
-            }
+                courseId,
+            },
         });
 
         revalidatePath(`/student/courses`);
         revalidatePath(`/student/courses/${courseId}`);
         
-        return { success: true, message: "Berhasil mendaftar kursus." };
+        return { success: true, message: "Berhasil mendaftar ke kursus ini!" };
     } catch (error) {
         console.error("Gagal mendaftar kursus:", error);
         return { success: false, error: "Terjadi kesalahan saat mencoba mendaftar kursus." };

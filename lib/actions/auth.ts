@@ -174,7 +174,7 @@ export async function createStudentAction(
         email: formData.get("email") as string,
         phone: (formData.get("phone") as string) || undefined,
         classLevelId: formData.get("classLevelId") as string,
-        password: (formData.get("password") as string) || "Password123",
+        password: (formData.get("password") as string) || process.env.STUDENT_DEFAULT_PASSWORD || "Password123",
     };
 
     const validation = createStudentSchema.safeParse(rawData);
@@ -225,7 +225,7 @@ export async function createStudentAction(
             success: true,
             message: `Akun siswa ${name} berhasil dibuat!`,
         };
-    } catch (dbError) {
+    } catch {
         await adminSupabase.auth.admin.deleteUser(authData.user.id);
         return {
             success: false,
@@ -236,7 +236,7 @@ export async function createStudentAction(
 
 
 /**
- * 6. Action Pindahkan Siswa ke Tingkatan Kelas Lain
+ * 5. Action Pindahkan Siswa ke Tingkatan Kelas Lain
  */
 export async function updateStudentClassLevelAction(
     studentProfileId: string,
@@ -255,7 +255,7 @@ export async function updateStudentClassLevelAction(
             success: true,
             message: "Tingkatan kelas siswa berhasil diperbarui.",
         };
-    } catch (error) {
+    } catch {
         return {
             success: false,
             error: "Gagal memindahkan tingkatan kelas siswa.",
@@ -264,7 +264,7 @@ export async function updateStudentClassLevelAction(
 }
 
 /**
- * 7. Action Reset Password Siswa oleh Admin
+ * 6. Action Reset Password Siswa oleh Admin
  */
 export async function resetStudentPasswordAction(
     userId: string,
@@ -273,10 +273,10 @@ export async function resetStudentPasswordAction(
     try {
         const adminSupabase = createAdminClient();
 
-        // Reset password akun auth ke default Password123
+        // Reset password akun auth ke default
         const { error: resetAuthError } =
             await adminSupabase.auth.admin.updateUserById(authId, {
-                password: "Password123",
+                password: process.env.STUDENT_DEFAULT_PASSWORD || "Password123",
             });
 
         if (resetAuthError) {
@@ -296,9 +296,9 @@ export async function resetStudentPasswordAction(
 
         return {
             success: true,
-            message: "Password siswa berhasil direset ke 'Password123'. Siswa wajib mengganti password saat login berikutnya.",
+            message: "Password siswa berhasil direset ke default. Siswa wajib mengganti password saat login berikutnya.",
         };
-    } catch (error) {
+    } catch {
         return {
             success: false,
             error: "Gagal mereset password siswa.",
