@@ -21,6 +21,8 @@ import {
 } from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
 import { reorderLessonsAction, createLessonAction, updateModuleAction, deleteModuleAction } from "@/lib/actions/module";
+import { createQuizAction } from "@/lib/actions/quiz";
+import QuizBuilderModal from "../quiz/QuizBuilder";
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
 import SortableLessonItem from "./SortableLessonItem";
@@ -51,6 +53,12 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
     // Module Edit states
     const [isEditingModule, setIsEditingModule] = useState(false);
     const [editModuleTitle, setEditModuleTitle] = useState(module.title);
+
+    //Quiz states
+    const [isAddingQuiz, setIsAddingQuiz] = useState(false);
+    const [quizTitle, setQuizTitle] = useState(`Kuis: ${module.title}`);
+    const [passingScore, setPassingScore] = useState(70);
+    const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: module.id,
@@ -124,7 +132,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
             const supabase = createClient();
             await supabase.storage.from(STORAGE_BUCKET).remove([fileUrl]);
         }
-        
+
         // Reset state
         setLessonTitle("");
         setVideoUrl("");
@@ -158,6 +166,23 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         });
     };
 
+    const handleCreateQuiz = async (e: React.FormEvent) => {
+        e.preventDefault();
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append("moduleId", module.id);
+            formData.append("title", quizTitle);
+            formData.append("passingScorePercent", passingScore.toString());
+            const res = await createQuizAction(null, formData);
+            if (res.success) {
+                setIsAddingQuiz(false);
+                toast.success(res.message);
+            } else {
+                toast.error(res.error || "Gagal membuat kuis");
+            }
+        });
+    };
+
     return (
         <div ref={setNodeRef} style={style} className={`border border-gray-200 rounded-md bg-white shadow-sm ${isDragging ? "opacity-50" : ""}`}>
             {/* Header Module (Draggable Area) */}
@@ -183,7 +208,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                         <h3 className="font-semibold text-gray-800">{module.title}</h3>
                     </div>
                 )}
-                
+
                 <div className="flex items-center gap-2">
                     {!isEditingModule && (
                         <>
@@ -282,6 +307,80 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                             </div>
                         </form>
                     )}
+
+                    <div className="mt-8 pt-4 border-t border-gray-200">
+                        <h4 className="font-semibold text-sm text-gray-800 mb-3">Evaluasi Modul</h4>
+
+                        {module.quiz ? (
+                            <div className="flex items-center justify-between bg-purple-50 p-3 rounded-md border border-purple-100">
+                                <div>
+                                    <h5 className="font-medium text-sm text-purple-900">{module.quiz.title}</h5>
+                                    <p className="text-xs text-purple-700 mt-1">
+                                        KKM: {module.quiz.passingScorePercent}% • {module.quiz.questions?.length || 0} Soal
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setIsQuizModalOpen(!isQuizModalOpen)} 
+                                    className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${isQuizModalOpen ? 'bg-purple-200 text-purple-800 hover:bg-purple-300' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                >
+                                    {isQuizModalOpen ? "Tutup Builder" : "Kelola Soal Kuis"}
+                                </button>
+                            </div>
+                        ) : !isAddingQuiz ? (
+                            <button
+                                onClick={() => setIsAddingQuiz(true)}
+                                className="w-full py-2.5 border-2 border-dashed border-purple-300 text-purple-600 rounded-md text-sm font-medium hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                            >
+                                + Buat Kuis untuk Modul Ini
+                            </button>
+                        ) : (
+                            <form onSubmit={handleCreateQuiz} className="p-4 border border-purple-100 bg-purple-50 rounded-md">
+                                <h5 className="font-medium text-sm mb-3 text-purple-900">Buat Kuis Baru</h5>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-600 mb-1">Judul Kuis</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={quizTitle}
+                                            onChange={(e) => setQuizTitle(e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-600 mb-1">Nilai Kelulusan Minimum (KKM %)</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            required
+                                            value={passingScore}
+                                            onChange={(e) => setPassingScore(Number(e.target.value))}
+                                            className="w-24 p-2 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 pt-2">
+                                        <button type="submit" disabled={isPending} className="bg-purple-600 text-white px-3 py-1.5 text-sm rounded hover:bg-purple-700 disabled:opacity-50">
+                                            Simpan Kuis
+                                        </button>
+                                        <button type="button" disabled={isPending} onClick={() => setIsAddingQuiz(false)} className="text-gray-600 px-3 py-1.5 text-sm hover:bg-gray-200 rounded">
+                                            Batal
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Inline Quiz Builder */}
+                        {isQuizModalOpen && module.quiz && (
+                            <div className="mt-4 border-2 border-purple-100 rounded-lg overflow-hidden bg-white">
+                                <QuizBuilderModal
+                                    quiz={module.quiz}
+                                    onClose={() => setIsQuizModalOpen(false)}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

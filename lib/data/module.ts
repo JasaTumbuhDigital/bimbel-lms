@@ -12,6 +12,16 @@ export async function getModulesByCourseId(courseId: string) {
             lessons: {
                 orderBy: { sortOrder: "asc" },
             },
+            quiz: {
+                include: {
+                    questions: {
+                        orderBy: { sortOrder: "asc" },
+                        include: {
+                            options: true
+                        }
+                    }
+                }
+            }
         },
     });
 }

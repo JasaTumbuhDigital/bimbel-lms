@@ -24,7 +24,7 @@ export async function getCourses() {
         if (user.role === "tutor") {
             if (!user.tutorProfile) return [];
             return await prisma.course.findMany({
-                where: { 
+                where: {
                     isArchived: false,
                     tutors: { some: { tutorProfileId: user.tutorProfile.id } }
                 },
@@ -123,6 +123,19 @@ export async function getCourseById(courseId: string) {
                                 },
                             } : undefined,
                         },
+                        quiz: {
+                            include: {
+                                questions: {
+                                    orderBy: { sortOrder: "asc" },
+                                    include: { options: true }
+                                },
+                                ...(isStudent && studentId ? {
+                                    progress: {
+                                        where: { studentId },
+                                    }
+                                } : {})
+                            }
+                        }
                     },
                 },
                 enrollments: isStudent && studentId ? {

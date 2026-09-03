@@ -4,12 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
-import { 
-    createModuleSchema, 
-    updateModuleSchema, 
-    reorderSchema, 
-    createLessonSchema, 
-    updateLessonSchema 
+import {
+    createModuleSchema,
+    updateModuleSchema,
+    reorderSchema,
+    createLessonSchema,
+    updateLessonSchema
 } from "@/lib/validations/module";
 import { deleteFileFromStorage } from "@/lib/supabase-storage-server";
 
@@ -40,7 +40,7 @@ export async function createModuleAction(
     }
 
     const { courseId, title } = validation.data;
-    
+
     const { success } = await verifyCourseAccess(courseId, false);
     if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
@@ -150,7 +150,7 @@ export async function reorderModulesAction(
     try {
         // Lakukan batch update secara transaksional
         await prisma.$transaction(
-            orderedModuleIds.map((id, index) => 
+            orderedModuleIds.map((id, index) =>
                 prisma.module.update({
                     where: { id },
                     data: { sortOrder: index }
@@ -207,13 +207,13 @@ export async function createLessonAction(
         const sortOrder = lastLesson ? lastLesson.sortOrder + 1 : 0;
 
         await prisma.lesson.create({
-            data: { 
+            data: {
                 moduleId: data.moduleId,
                 title: data.title,
                 contentType: data.contentType,
                 videoUrl: data.videoUrl,
                 documentUrl: data.documentUrl,
-                sortOrder 
+                sortOrder
             }
         });
 
@@ -249,7 +249,7 @@ export async function updateLessonAction(
     const { id, ...updateData } = validation.data;
 
     try {
-        const lessonRecord = await prisma.lesson.findUnique({ 
+        const lessonRecord = await prisma.lesson.findUnique({
             where: { id },
             include: { module: true }
         });
@@ -287,7 +287,7 @@ export async function deleteLessonAction(
     if (!userId) return { success: false, error: "Akses ditolak." };
 
     try {
-        const lessonRecord = await prisma.lesson.findUnique({ 
+        const lessonRecord = await prisma.lesson.findUnique({
             where: { id: lessonId },
             include: { module: true }
         });
@@ -336,7 +336,7 @@ export async function reorderLessonsAction(
         if (!success) return { success: false, error: "Anda tidak berhak mengubah kursus ini." };
 
         await prisma.$transaction(
-            orderedLessonIds.map((id, index) => 
+            orderedLessonIds.map((id, index) =>
                 prisma.lesson.update({
                     where: { id },
                     data: { sortOrder: index }
