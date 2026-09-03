@@ -61,6 +61,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                 alt={course.title}
                                 fill
                                 className="object-cover"
+                                priority
                                 unoptimized
                             />
                         ) : (

@@ -29,6 +29,7 @@ export async function createQuizAction(
         moduleId: formData.get("moduleId") as string,
         title: formData.get("title") as string,
         passingScorePercent: formData.get("passingScorePercent"),
+        isRandomized: formData.get("isRandomized") === "true",
     };
 
     const validation = createQuizSchema.safeParse(rawData);
@@ -36,7 +37,7 @@ export async function createQuizAction(
     if (!validation.success) {
         return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
     }
-    const { moduleId, title, passingScorePercent } = validation.data;
+    const { moduleId, title, passingScorePercent, isRandomized } = validation.data;
     try {
 
         // Cek akses ke modul ini dengan menelusuri course-nya
@@ -51,7 +52,7 @@ export async function createQuizAction(
         if (existingQuiz) return { success: false, error: "Modul ini sudah memiliki kuis." };
 
         await prisma.quiz.create({
-            data: { moduleId, title, passingScorePercent }
+            data: { moduleId, title, passingScorePercent, isRandomized }
         });
 
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
@@ -72,8 +73,9 @@ export async function updateQuizAction(
 
     const rawData = {
         id: formData.get("id") as string,
-        title: formData.get("title") as string,
-        passingScorePercent: formData.get("passingScorePercent"),
+        title: formData.get("title") ? (formData.get("title") as string) : undefined,
+        passingScorePercent: formData.get("passingScorePercent") ? formData.get("passingScorePercent") : undefined,
+        isRandomized: formData.get("isRandomized") !== null ? formData.get("isRandomized") === "true" : undefined,
     };
 
     const validation = updateQuizSchema.safeParse(rawData);
@@ -82,7 +84,7 @@ export async function updateQuizAction(
         return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
     }
 
-    const { id, title, passingScorePercent } = validation.data;
+    const { id, title, passingScorePercent, isRandomized } = validation.data;
 
     try {
         const quizRecord = await prisma.quiz.findUnique({
@@ -98,7 +100,8 @@ export async function updateQuizAction(
             where: { id },
             data: {
                 ...(title && { title }),
-                ...(passingScorePercent !== undefined && { passingScorePercent })
+                ...(passingScorePercent !== undefined && { passingScorePercent }),
+                ...(isRandomized !== undefined && { isRandomized })
             }
         });
 

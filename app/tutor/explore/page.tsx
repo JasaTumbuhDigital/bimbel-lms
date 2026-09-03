@@ -42,7 +42,7 @@ export default async function TutorExplorePage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {courses.map((course) => {
+                        {courses.map((course, index) => {
                             const isMyCourse = course.tutors.some(t => t.tutorProfileId === user.tutorProfile?.id);
                             
                             const fullImageUrl = getPublicUrl(course.thumbnailUrl || null);
@@ -60,6 +60,7 @@ export default async function TutorExplorePage() {
                                                 src={fullImageUrl}
                                                 alt={course.title}
                                                 fill
+                                                priority={index < 3}
                                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
                                                 unoptimized
                                             />

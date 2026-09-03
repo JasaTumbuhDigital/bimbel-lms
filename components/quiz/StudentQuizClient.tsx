@@ -16,10 +16,16 @@ export default function StudentQuizClient({ quiz, courseId }: { quiz: any, cours
     // Status setelah disubmit
     const [result, setResult] = useState<any>(null);
 
-    const handleOptionToggle = (questionId: string, optionId: string) => {
+    const handleOptionToggle = (questionId: string, optionId: string, allowMultiple: boolean) => {
         if (result) return; // Kalau sudah disubmit, tidak bisa diubah
 
         setAnswers(prev => {
+            if (!allowMultiple) {
+                // Mode Single Choice (Radio)
+                return { ...prev, [questionId]: [optionId] };
+            }
+
+            // Mode Multiple Choice (Checkbox)
             const currentSelected = prev[questionId] || [];
             if (currentSelected.includes(optionId)) {
                 return { ...prev, [questionId]: currentSelected.filter(id => id !== optionId) };
@@ -127,10 +133,11 @@ export default function StudentQuizClient({ quiz, courseId }: { quiz: any, cours
                                             }`}
                                         >
                                             <input 
-                                                type="checkbox"
+                                                type={q.allowMultiple ? "checkbox" : "radio"}
+                                                name={`question-${q.id}`}
                                                 checked={isSelected}
-                                                onChange={() => handleOptionToggle(q.id, opt.id)}
-                                                className="mt-0.5 w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 transition-colors"
+                                                onChange={() => handleOptionToggle(q.id, opt.id, q.allowMultiple)}
+                                                className={`mt-0.5 w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500 transition-colors ${q.allowMultiple ? 'rounded' : 'rounded-full'}`}
                                             />
                                             <span className={`text-sm md:text-[15px] leading-relaxed ${isSelected ? 'text-purple-900 font-medium' : 'text-slate-700'}`}>
                                                 {opt.optionText}

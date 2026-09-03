@@ -49,6 +49,7 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
                                 alt={course.title}
                                 fill
                                 className="object-cover"
+                                priority
                                 unoptimized
                             />
                         ) : (

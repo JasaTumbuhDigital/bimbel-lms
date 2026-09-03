@@ -26,16 +26,8 @@ export async function getQuizForStudent(quizId: string) {
                 },
                 questions: {
                     orderBy: { sortOrder: "asc" },
-                    select: {
-                        id: true,
-                        questionText: true,
-                        // Hanya ambil id dan teks opsi, JANGAN AMBIL isCorrect!
-                        options: {
-                            select: {
-                                id: true,
-                                optionText: true
-                            }
-                        }
+                    include: {
+                        options: true // Ambil semua data di server untuk dihitung
                     }
                 },
                 progress: {
@@ -60,6 +52,29 @@ export async function getQuizForStudent(quizId: string) {
             return { success: false, error: "Kuis ini belum siap atau belum memiliki soal yang cukup." };
         }
 
+        // Mapping data agar AMAN:
+        // Hitung allowMultiple di server, tapi JANGAN kirim isCorrect ke client
+        const safeQuestions = quiz.questions.map(q => {
+            const correctCount = q.options.filter(opt => opt.isCorrect).length;
+            const allowMultiple = correctCount > 1;
+
+            return {
+                id: q.id,
+                questionText: q.questionText,
+                allowMultiple, // Kirim info tipe input ke client
+                options: q.options.map(opt => ({
+                    id: opt.id,
+                    optionText: opt.optionText
+                }))
+            };
+        });
+
+        // Jika isRandomized aktif, acak urutan soal
+        let finalQuestions = safeQuestions;
+        if (quiz.isRandomized) {
+            finalQuestions = [...safeQuestions].sort(() => Math.random() - 0.5);
+        }
+
         return {
             success: true,
             data: {
@@ -68,7 +83,7 @@ export async function getQuizForStudent(quizId: string) {
                 passingScorePercent: quiz.passingScorePercent,
                 moduleId: quiz.moduleId,
                 courseId: quiz.module.courseId,
-                questions: quiz.questions,
+                questions: finalQuestions,
                 userProgress: quiz.progress[0] || null
             }
         };

@@ -1,8 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { toast } from "sonner";
-import { saveQuizQuestionAction, deleteQuizQuestionAction } from "@/lib/actions/quiz";
+import { saveQuizQuestionAction, deleteQuizQuestionAction, reorderQuizQuestionsAction, updateQuizAction } from "@/lib/actions/quiz";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import SortableQuestionItem from "./SortableQuestionItem";
 
 export default function QuizBuilderModal({
     quiz,
@@ -12,6 +28,62 @@ export default function QuizBuilderModal({
     onClose: () => void
 }) {
     const [isPending, startTransition] = useTransition();
+
+    // State untuk Soal (sync dengan DB)
+    const [questions, setQuestions] = useState(quiz.questions || []);
+    
+    // State untuk Setting Kuis
+    const [isRandomized, setIsRandomized] = useState(quiz.isRandomized || false);
+
+    useEffect(() => {
+        setQuestions(quiz.questions || []);
+        setIsRandomized(quiz.isRandomized || false);
+    }, [quiz.questions, quiz.isRandomized]);
+
+    // Sensors untuk drag & drop
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    // --- HANDLERS UNTUK MENGUBAH SETTING KUIS ---
+    const handleToggleRandomize = async (checked: boolean) => {
+        setIsRandomized(checked);
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append("id", quiz.id);
+            formData.append("isRandomized", checked.toString());
+            
+            const res = await updateQuizAction(null, formData);
+            if (!res.success) {
+                toast.error(res.error || "Gagal mengubah pengaturan kuis");
+                setIsRandomized(!checked); // Revert jika gagal
+            } else {
+                toast.success("Pengaturan kuis berhasil diperbarui");
+            }
+        });
+    };
+
+    // --- HANDLERS UNTUK REORDER ---
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = questions.findIndex((q: any) => q.id === active.id);
+        const newIndex = questions.findIndex((q: any) => q.id === over.id);
+        const newOrdered = arrayMove(questions, oldIndex, newIndex);
+
+        setQuestions(newOrdered);
+
+        startTransition(async () => {
+            const orderedIds = newOrdered.map((q: any) => q.id);
+            const res = await reorderQuizQuestionsAction(quiz.id, orderedIds);
+            if (!res.success) {
+                toast.error(res.error || "Gagal mengurutkan soal");
+                setQuestions(questions); // Revert UI
+            }
+        });
+    };
 
     // State untuk visibility Form Soal
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -110,7 +182,19 @@ export default function QuizBuilderModal({
                 /* Konten (List Soal) */
                 <div className="p-5 flex-1 relative">
                     <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
-                        <h3 className="font-semibold text-gray-800 text-sm">Daftar Soal ({quiz.questions?.length || 0})</h3>
+                        <div className="flex items-center gap-3">
+                            <h3 className="font-semibold text-gray-800 text-sm">Daftar Soal ({questions.length})</h3>
+                            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none bg-gray-50 border border-gray-200 px-2.5 py-1 rounded hover:bg-gray-100 transition-colors">
+                                <input 
+                                    type="checkbox" 
+                                    disabled={isPending}
+                                    checked={isRandomized}
+                                    onChange={(e) => handleToggleRandomize(e.target.checked)}
+                                    className="rounded text-purple-600 focus:ring-purple-500 w-3.5 h-3.5 disabled:opacity-50"
+                                />
+                                <span>Acak Urutan Soal</span>
+                            </label>
+                        </div>
                         <button
                             onClick={openAddForm}
                             type="button"
@@ -120,37 +204,27 @@ export default function QuizBuilderModal({
                         </button>
                     </div>
 
-                    {quiz.questions?.length === 0 ? (
+                    {questions.length === 0 ? (
                         <div className="text-center p-12 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 bg-white">
                             Belum ada soal. Klik "+ Tambah Soal" untuk mulai membuat.
                         </div>
                     ) : (
-                        <div className="space-y-4">
-                            {quiz.questions?.map((q: any, i: number) => (
-                                <div key={q.id} className="border border-gray-200 p-5 rounded-md shadow-sm bg-white">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <p className="font-medium text-sm text-gray-800 whitespace-pre-wrap">
-                                            <span className="text-gray-400 mr-2">{i + 1}.</span>
-                                            {q.questionText}
-                                        </p>
-                                        <div className="flex gap-3 ml-4 shrink-0">
-                                            <button onClick={() => openEditForm(q)} disabled={isPending} className="text-xs font-medium text-blue-600 hover:underline">Edit</button>
-                                            <button onClick={() => handleDeleteQuestion(q.id)} disabled={isPending} className="text-xs font-medium text-red-600 hover:underline">Hapus</button>
-                                        </div>
-                                    </div>
-
-                                    {/* List Opsi Jawaban */}
-                                    <div className="pl-6 space-y-1.5 mt-4">
-                                        {q.options?.map((opt: any) => (
-                                            <div key={opt.id} className={`text-xs p-2.5 rounded-md flex items-start gap-2 ${opt.isCorrect ? 'bg-green-50 border border-green-200 text-green-900 font-medium' : 'bg-gray-50 border border-gray-100 text-gray-600'}`}>
-                                                <span>{opt.isCorrect ? "✅" : "⚪"}</span>
-                                                <span className="mt-0.5">{opt.optionText}</span>
-                                            </div>
-                                        ))}
-                                    </div>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                            <SortableContext items={questions.map((q: any) => q.id)} strategy={verticalListSortingStrategy}>
+                                <div className="space-y-4">
+                                    {questions.map((q: any, i: number) => (
+                                        <SortableQuestionItem
+                                            key={q.id}
+                                            q={q}
+                                            index={i}
+                                            isPending={isPending}
+                                            onEdit={openEditForm}
+                                            onDelete={handleDeleteQuestion}
+                                        />
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </SortableContext>
+                        </DndContext>
                     )}
                 </div>
             ) : (
