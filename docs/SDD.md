@@ -1,11 +1,15 @@
 # Software Design Document (SDD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 1.1
-**Tanggal:** 25 Agustus 2026
-**Terkait dokumen:** PRD.md (v2.0)
+**Versi:** 1.3
+**Tanggal:** 2 September 2026
+**Terkait dokumen:** PRD.md (v2.4)
 **Cakupan dokumen:** Fokus desain **Tier 1 (Base MVP)**. Tier 2 dibahas sebagai *extension notes* di tiap section relevan (bukan didesain detail) — akan didetailkan ulang sebagai revisi SDD terpisah saat Tier 2 mulai dikerjakan, sesuai fase di Implementation Plan.
 
+> **Ringkasan perubahan v1.3:** Relasi Quiz dipindah dari Lesson ke **Module** (1:1, sejajar dengan Lesson sebagai sub-materi, sesuai bahasa asli FR-7). Kelulusan kuis dipertegas **murni informasional** — tidak lagi mengisi `lesson_progress` secara otomatis seperti disebut di v1.2. Detail lengkap: TSD-Quiz.md v3.0.
+>
+> **Ringkasan perubahan v1.2:** Desain Quiz Module dirombak (§2 ERD, §4 Server Actions, §6.3 flow) — dari "riwayat percobaan penuh" (`quiz_attempts`/`quiz_answers`) menjadi post-test per lesson dengan `quiz_progress` (1 row agregat per siswa) & passing grade, kelulusan otomatis mengisi `lesson_progress`. Detail lengkap ada di TSD-Quiz.md v2.0. Desain lama dicatat sebagai kandidat fitur "exam standalone" terpisah di masa depan.
+>
 > **Ringkasan perubahan v1.1:** Relasi `courses` ↔ `class_levels` diubah dari single FK nullable menjadi **many-to-many** (`course_class_levels`) + flag eksplisit `visible_to_all_levels`. Kepemilikan kursus oleh tutor diubah dari asumsi implisit jadi **many-to-many eksplisit** (`course_tutors`), mendukung co-teaching dan jadi dasar pemisahan akses Admin (lintas institusi) vs Tutor (scoped ke kursus miliknya) — lihat Design Decisions §7.6, §7.7.
 
 ---
@@ -125,7 +129,7 @@ erDiagram
 
     COURSES ||--o{ MODULES : "contains"
     MODULES ||--o{ LESSONS : "contains"
-    LESSONS ||--o{ QUIZZES : "may have"
+    MODULES ||--o| QUIZZES : "may have (1:1, sibling dari Lesson, lihat TSD-Quiz.md v3.0 D1)"
 
     STUDENT_PROFILES ||--o{ ENROLLMENTS : "enrolls"
     COURSES ||--o{ ENROLLMENTS : "enrolled by"
@@ -136,9 +140,8 @@ erDiagram
     QUIZZES ||--o{ QUIZ_QUESTIONS : "contains"
     QUIZ_QUESTIONS ||--o{ QUIZ_OPTIONS : "contains"
 
-    STUDENT_PROFILES ||--o{ QUIZ_ATTEMPTS : "attempts"
-    QUIZZES ||--o{ QUIZ_ATTEMPTS : "attempted"
-    QUIZ_ATTEMPTS ||--o{ QUIZ_ANSWERS : "contains"
+    STUDENT_PROFILES ||--o{ QUIZ_PROGRESS : "progress (1 row agregat, bukan histori)"
+    QUIZZES ||--o{ QUIZ_PROGRESS : "tracked by"
 
     STUDENT_PROFILES ||--o{ WISHLISTS : "saves"
     COURSES ||--o{ WISHLISTS : "saved in"
@@ -244,8 +247,9 @@ erDiagram
 
     QUIZZES {
         uuid id PK
-        uuid lesson_id FK
+        uuid module_id FK "unique — 1:1 dengan module"
         string title
+        int passing_score_percent "default 70"
     }
 
     QUIZ_QUESTIONS {
@@ -262,20 +266,14 @@ erDiagram
         boolean is_correct
     }
 
-    QUIZ_ATTEMPTS {
+    QUIZ_PROGRESS {
         uuid id PK
         uuid student_id FK
         uuid quiz_id FK
-        float score
-        timestamp started_at
-        timestamp submitted_at
-    }
-
-    QUIZ_ANSWERS {
-        uuid id PK
-        uuid attempt_id FK
-        uuid question_id FK
-        uuid selected_option_id FK
+        float best_score "MAX dari semua percobaan"
+        boolean is_passed "tidak pernah turun setelah true"
+        int attempts_count
+        timestamp last_attempt_at
     }
 
     WISHLISTS {
@@ -344,10 +342,10 @@ Tabel tambahan yang **akan** diperlukan saat Tier 2 dikerjakan (tidak dibuat sek
 - `getEnrolledCourses` (query, bukan mutasi — via Server Component fetch langsung)
 - `markLessonComplete` / `unmarkLessonComplete` (FR-9)
 
-**Quiz**
-- `createQuiz`, `addQuizQuestion`, `addQuizOption` (FR-11)
-- `submitQuizAttempt` — terima jawaban, hitung skor otomatis, simpan attempt (FR-11, FR-12)
-- `getQuizAttemptHistory` (query)
+**Quiz (post-test per modul, lihat TSD-Quiz.md v3.0)**
+- `createQuiz`, `addQuizQuestion`, `addQuizOption` (FR-11) — 1 modul maksimal 1 kuis
+- `submitQuizAttempt` — terima jawaban, hitung skor otomatis, upsert `quiz_progress` (skor terbaik & status lulus) — murni badge, tidak menyentuh tabel lain (FR-11, FR-12)
+- `getQuizProgressSummaryForStudent` (query) — status agregat, bukan histori kronologis tiap percobaan
 
 **Wishlist & Reviews**
 - `addToWishlist`, `removeFromWishlist` (FR-15)
@@ -382,7 +380,7 @@ Pola Server Actions untuk domain lain (live class, Q&A, sertifikat) kemungkinan 
 | **Course & Content Module** | CRUD kursus/modul/lesson, filter tampilan kursus sesuai tingkatan siswa, embed video YouTube, upload & preview dokumen. Untuk tutor, seluruh operasi CRUD kursus divalidasi terhadap keanggotaan di `course_tutors` (hanya kursus miliknya) | Prisma, Supabase Storage, Class Level Module, Tutor Assignment Module |
 | **Tutor Assignment Module** | Assign/unassign tutor ke kursus (many-to-many via `course_tutors`), jadi sumber kebenaran tunggal untuk scoping akses tutor (dipakai Middleware & Course Module) — hanya bisa dioperasikan oleh admin (FR-40) | Prisma |
 | **Progress Tracking Module** | Simpan/hapus status "selesai" per lesson per siswa (manual, Tier 1) | Prisma |
-| **Quiz Module** | Builder kuis (tutor/admin), pengerjaan kuis (siswa), penilaian otomatis, riwayat percobaan | Prisma |
+| **Quiz Module** | Builder kuis per modul (tutor/admin), pengerjaan kuis (siswa), penilaian otomatis vs passing grade — murni badge informasional, tidak menggerbang modul lain | Prisma |
 | **Student Dashboard Module** | Agregasi data ringkasan (enrolled/aktif/selesai), wishlist, reviews — komposisi dari Course, Progress, dan modul terkait lainnya | Course Module, Progress Module |
 | **Admin Dashboard Module** | Ringkasan operasional (total siswa/kursus/kelas), akses ke CRUD user & kursus | Semua modul CRUD di atas |
 | **Branding Config Module** | Sumber tunggal konfigurasi tampilan/identitas institusi (`config/institution.ts`), dikonsumsi oleh Landing Page & seluruh layout | — (static config, bukan database) |
@@ -475,7 +473,9 @@ sequenceDiagram
     UI-->>Siswa: Update UI (progress bar dashboard ikut ter-update)
 ```
 
-### 6.3 Flow: Siswa Mengerjakan Kuis & Penilaian Otomatis
+### 6.3 Flow: Siswa Mengerjakan Kuis Modul (Post-Test, Badge Informasional)
+
+> **Direvisi (2 September 2026):** Kuis sekarang melekat ke **Module** (bukan Lesson), sejajar dengan Lesson sebagai sub-materi. Model post-test dengan passing grade tetap dipakai — tidak ada tabel `quiz_attempts`/`quiz_answers` granular, cukup 1 row agregat `quiz_progress` per siswa per kuis. **Kelulusan murni informasional** — tidak lagi mengisi `lesson_progress` (beda dari revisi sebelumnya di v1.2/TSD-Quiz.md v2.0). Detail lengkap & alasan tiap keputusan: **TSD-Quiz.md v3.0**. Alur "riwayat percobaan penuh + structure-locked" versi paling awal dipindah jadi draft fitur terpisah (exam standalone), lihat Implementation-Plan.md §4 Fase 11.
 
 ```mermaid
 sequenceDiagram
@@ -485,24 +485,23 @@ sequenceDiagram
     participant SA as Server Action
     participant DB as Postgres (Prisma)
 
-    Siswa->>UI: Buka kuis dari lesson
+    Siswa->>UI: Buka kuis dari halaman modul
     UI->>SC: Render halaman kuis
-    SC->>DB: Ambil quiz_questions + quiz_options<br/>(tanpa expose is_correct ke client)
-    DB-->>SC: Daftar soal & pilihan jawaban
+    SC->>DB: Ambil quiz_questions + quiz_options<br/>(tanpa expose is_correct ke client)<br/>+ quiz_progress siswa saat ini (jika ada)
+    DB-->>SC: Daftar soal, pilihan jawaban, status lulus/skor terbaik sebelumnya
     SC-->>UI: Tampilkan form kuis
 
     Siswa->>UI: Pilih jawaban tiap soal, klik Submit
     UI->>SA: submitQuizAttempt(quizId, answers[])
     SA->>DB: Ambil is_correct untuk tiap selected_option_id
     DB-->>SA: Data jawaban benar
-    SA->>SA: Hitung skor (jumlah benar / total soal)
-    SA->>DB: Insert quiz_attempts (score, submitted_at)
-    SA->>DB: Insert quiz_answers (per soal)
+    SA->>SA: Hitung skor (jumlah benar / total soal) vs passing_score_percent
+    SA->>DB: Upsert quiz_progress (best_score = MAX(lama, baru),<br/>is_passed = lama OR lulus_attempt_ini, attempts_count += 1)<br/>— operasi berdiri sendiri, TIDAK ada efek ke tabel lain
     DB-->>SA: OK
-    SA-->>UI: Skor & hasil per soal
-    UI-->>Siswa: Tampilkan hasil kuis
+    SA-->>UI: Skor attempt ini, status lulus, best_score terbaru, hasil per soal (ephemeral)
+    UI-->>Siswa: Tampilkan hasil kuis (badge status di halaman modul ikut ter-update)
 
-    Note over Siswa,DB: Riwayat percobaan (FR-12) diambil dari<br/>seluruh quiz_attempts milik siswa,<br/>skor final ditampilkan = MAX(score)
+    Note over Siswa,DB: Status kuis murni informasional — tidak menggerbang lesson_progress,<br/>tidak masuk hitungan progress bar kursus, tidak mengunci modul berikutnya.<br/>Tidak ada histori kronologis tiap percobaan yang disimpan (FR-12) — hanya status agregat.
 ```
 
 ---
@@ -571,7 +570,7 @@ Sudah dibahas detail alasannya di PRD §5.1a dan Implementation Plan §2 — dic
 | **Performance** (Lighthouse ≥90, response <500ms p95) | Server Components untuk halaman yang didominasi baca data (listing kursus, landing page) mengurangi JS yang dikirim ke client. `next/image` untuk optimasi gambar (thumbnail kursus, logo). Server Actions menjalankan query langsung di server tanpa round-trip API tambahan. |
 | **Scalability** (100–200 concurrent users per instance) | Arsitektur monolitik modular ini cukup untuk skala tersebut — Vercel & Supabase menangani scaling infrastruktur dasar (serverless functions, connection pooling Postgres) tanpa perlu desain khusus tambahan di level aplikasi. |
 | **Availability** (99% uptime) | Ditentukan oleh SLA Vercel + Supabase, bukan oleh desain aplikasi — desain aplikasi tidak menambah single point of failure tambahan (tidak ada service kustom terpisah yang perlu di-maintain uptime-nya sendiri). |
-| **Security — RLS aktif per role** | Setiap tabel yang berisi data personal (terutama `student_profiles`, `lesson_progress`, `quiz_attempts`) akan punya RLS policy yang membatasi akses berdasarkan `auth.uid()` yang cocok dengan `user_id` terkait, dan role (siswa hanya baca data miliknya, admin baca semua). **Tutor dibatasi lebih spesifik**: policy untuk tutor memfilter lewat `course_tutors` — hanya kursus yang dia ampu dan siswa yang terenroll di kursus itu, bukan seluruh data institusi (lihat Design Decision §7.7). Detail policy per tabel didetailkan di TSD. |
+| **Security — RLS aktif per role** | Setiap tabel yang berisi data personal (terutama `student_profiles`, `lesson_progress`, `quiz_progress`) akan punya RLS policy yang membatasi akses berdasarkan `auth.uid()` yang cocok dengan `user_id` terkait, dan role (siswa hanya baca data miliknya, admin baca semua). **Tutor dibatasi lebih spesifik**: policy untuk tutor memfilter lewat `course_tutors` — hanya kursus yang dia ampu dan siswa yang terenroll di kursus itu, bukan seluruh data institusi (lihat Design Decision §7.7). Detail policy per tabel didetailkan di TSD. |
 | **Security — kredensial tidak hardcoded** | Seluruh API key (Supabase, dan nanti payment/WA gateway di Tier 2) wajib lewat environment variable, didokumentasikan di `.env.example` (selaras dengan Implementation Plan Fase 1). |
 | **Usability — mobile-first** | Tailwind + shadcn/ui dipakai dengan pendekatan mobile-first breakpoint dari awal desain komponen, bukan didesain desktop-first lalu di-adapt. |
 | **Data Integrity — status selesai tersimpan segera** | `markLessonComplete` (Server Action) langsung melakukan write ke database saat diklik — tidak ada state client-only yang berisiko hilang sebelum tersimpan, konsisten dengan pendekatan manual Tier 1 yang lebih sederhana dibanding auto-save berkala (yang baru relevan di Tier 2/FR-39). |

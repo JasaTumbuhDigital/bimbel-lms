@@ -125,6 +125,32 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
                                         </Link>
                                     );
                                 })}
+
+                                {/* TOMBOL KUIS DI SIDEBAR */}
+                                {module.quiz && (
+                                    <Link
+                                        href={`/student/courses/${course.id}/quiz/${module.quiz.id}`}
+                                        className={`flex items-start gap-3 px-3 py-3 rounded-lg transition-all mt-2 hover:bg-purple-50 border border-transparent bg-purple-50/50`}
+                                    >
+                                        <div className="mt-0.5 shrink-0">
+                                            {module.quiz.progress && module.quiz.progress.length > 0 && module.quiz.progress[0].isPassed ? (
+                                                <svg className="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                <div className={`w-4 h-4 rounded-full border-2 border-purple-400`}></div>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-sm font-semibold text-purple-800`}>
+                                                Evaluasi Kuis
+                                            </h4>
+                                            <p className={`text-[10px] uppercase mt-0.5 font-medium text-purple-600`}>
+                                                {module.quiz.title}
+                                            </p>
+                                        </div>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     ))}

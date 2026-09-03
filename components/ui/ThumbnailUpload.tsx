@@ -84,6 +84,7 @@ export default function ThumbnailUpload({
                         fill
                         className="object-cover"
                         unoptimized
+                        priority
                     />
                 </div>
             )}

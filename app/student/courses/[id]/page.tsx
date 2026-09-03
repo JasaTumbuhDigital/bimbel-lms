@@ -61,6 +61,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                 alt={course.title}
                                 fill
                                 className="object-cover"
+                                priority
                                 unoptimized
                             />
                         ) : (
@@ -179,6 +180,36 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                             </div>
                                             );
                                         })
+                                    )}
+                                    {/* QUIZ DI COURSE DETAIL */}
+                                    {module.quiz && (
+                                        <div className="flex items-center justify-between px-6 py-4 bg-purple-50 hover:bg-purple-100/50 transition-colors border-t border-purple-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-purple-100 text-purple-700">
+                                                    {module.quiz.progress && module.quiz.progress.length > 0 && module.quiz.progress[0].isPassed ? (
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                                    ) : (
+                                                        "Q"
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-purple-900">Evaluasi: {module.quiz.title}</h4>
+                                                    <p className="text-[11px] text-purple-600 uppercase mt-0.5 tracking-wider">Kuis Modul</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {isEnrolled ? (
+                                                    <Link 
+                                                        href={`/student/courses/${course.id}/quiz/${module.quiz.id}`}
+                                                        className="text-sm font-medium text-purple-700 hover:text-purple-900 hover:underline"
+                                                    >
+                                                        Mulai Kuis
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-sm font-medium text-purple-400">Terkunci</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             </div>

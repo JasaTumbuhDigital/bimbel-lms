@@ -21,6 +21,8 @@ import {
 } from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
 import { reorderLessonsAction, createLessonAction, updateModuleAction, deleteModuleAction } from "@/lib/actions/module";
+import { createQuizAction, updateQuizAction, deleteQuizAction } from "@/lib/actions/quiz";
+import QuizBuilderModal from "../quiz/QuizBuilder";
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
 import SortableLessonItem from "./SortableLessonItem";
@@ -51,6 +53,48 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
     // Module Edit states
     const [isEditingModule, setIsEditingModule] = useState(false);
     const [editModuleTitle, setEditModuleTitle] = useState(module.title);
+
+    //Quiz states
+    const [isAddingQuiz, setIsAddingQuiz] = useState(false);
+    const [quizTitle, setQuizTitle] = useState(`Kuis: ${module.title}`);
+    const [passingScore, setPassingScore] = useState(70);
+    const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+    const [isRandomized, setIsRandomized] = useState(false);
+
+    // Edit & Delete Quiz states
+    const [isEditingQuizDetails, setIsEditingQuizDetails] = useState(false);
+    const [editQuizTitle, setEditQuizTitle] = useState(module.quiz?.title || "");
+    const [editQuizPassingScore, setEditQuizPassingScore] = useState(module.quiz?.passingScorePercent || 70);
+
+    const handleUpdateQuizDetails = async (e: React.FormEvent) => {
+        e.preventDefault();
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append("id", module.quiz.id);
+            formData.append("title", editQuizTitle);
+            formData.append("passingScorePercent", editQuizPassingScore.toString());
+            const res = await updateQuizAction(null, formData);
+            if (res.success) {
+                toast.success("Kuis berhasil diperbarui");
+                setIsEditingQuizDetails(false);
+            } else {
+                toast.error(res.error || "Gagal memperbarui kuis");
+            }
+        });
+    };
+
+    const handleDeleteQuiz = async () => {
+        if (!confirm("Apakah Anda yakin ingin menghapus kuis ini beserta seluruh soalnya?")) return;
+        startTransition(async () => {
+            const res = await deleteQuizAction(module.quiz.id);
+            if (res.success) {
+                toast.success("Kuis berhasil dihapus");
+                setIsQuizModalOpen(false);
+            } else {
+                toast.error(res.error || "Gagal menghapus kuis");
+            }
+        });
+    };
 
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: module.id,
@@ -124,7 +168,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
             const supabase = createClient();
             await supabase.storage.from(STORAGE_BUCKET).remove([fileUrl]);
         }
-        
+
         // Reset state
         setLessonTitle("");
         setVideoUrl("");
@@ -158,6 +202,24 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         });
     };
 
+    const handleCreateQuiz = async (e: React.FormEvent) => {
+        e.preventDefault();
+        startTransition(async () => {
+            const formData = new FormData();
+            formData.append("moduleId", module.id);
+            formData.append("title", quizTitle);
+            formData.append("passingScorePercent", passingScore.toString());
+            formData.append("isRandomized", isRandomized.toString());
+            const res = await createQuizAction(null, formData);
+            if (res.success) {
+                setIsAddingQuiz(false);
+                toast.success(res.message);
+            } else {
+                toast.error(res.error || "Gagal membuat kuis");
+            }
+        });
+    };
+
     return (
         <div ref={setNodeRef} style={style} className={`border border-gray-200 rounded-md bg-white shadow-sm ${isDragging ? "opacity-50" : ""}`}>
             {/* Header Module (Draggable Area) */}
@@ -183,7 +245,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                         <h3 className="font-semibold text-gray-800">{module.title}</h3>
                     </div>
                 )}
-                
+
                 <div className="flex items-center gap-2">
                     {!isEditingModule && (
                         <>
@@ -282,6 +344,166 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                             </div>
                         </form>
                     )}
+
+                    <div className="mt-8 pt-4 border-t border-gray-200">
+                        <h4 className="font-semibold text-sm text-gray-800 mb-3">Evaluasi Modul</h4>
+
+                        {module.quiz ? (
+                            !isEditingQuizDetails ? (
+                                <div className="flex items-center justify-between bg-purple-50 p-3.5 rounded-md border border-purple-100">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h5 className="font-medium text-sm text-purple-900">{module.quiz.title}</h5>
+                                            {module.quiz.isRandomized && (
+                                                <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded font-medium">
+                                                    Acak
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-purple-700 mt-1">
+                                            KKM: {module.quiz.passingScorePercent}% • {module.quiz.questions?.length || 0} Soal
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditQuizTitle(module.quiz.title);
+                                                setEditQuizPassingScore(module.quiz.passingScorePercent);
+                                                setIsEditingQuizDetails(true);
+                                            }}
+                                            className="text-xs text-purple-700 hover:text-purple-900 font-medium px-2 py-1 hover:bg-purple-100 rounded transition-colors"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteQuiz}
+                                            disabled={isPending}
+                                            className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 hover:bg-red-50 rounded transition-colors"
+                                        >
+                                            Hapus
+                                        </button>
+                                        <button
+                                            onClick={() => setIsQuizModalOpen(!isQuizModalOpen)} 
+                                            className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${isQuizModalOpen ? 'bg-purple-200 text-purple-800 hover:bg-purple-300' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                        >
+                                            {isQuizModalOpen ? "Tutup Builder" : "Kelola Soal"}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleUpdateQuizDetails} className="p-4 border border-purple-200 bg-purple-50 rounded-md space-y-3">
+                                    <h5 className="font-medium text-xs text-purple-900 font-bold uppercase tracking-wider">Edit Detail Kuis</h5>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-xs text-gray-600 mb-1">Judul Kuis</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={editQuizTitle}
+                                                onChange={(e) => setEditQuizTitle(e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded text-sm bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-600 mb-1">KKM (%)</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="100"
+                                                required
+                                                value={editQuizPassingScore}
+                                                onChange={(e) => setEditQuizPassingScore(Number(e.target.value))}
+                                                className="w-full p-2 border border-gray-300 rounded text-sm bg-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditingQuizDetails(false)}
+                                            className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-200 rounded"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isPending}
+                                            className="bg-purple-600 text-white px-3 py-1.5 text-xs rounded hover:bg-purple-700 font-medium disabled:opacity-50"
+                                        >
+                                            Simpan Perubahan
+                                        </button>
+                                    </div>
+                                </form>
+                            )
+                        ) : !isAddingQuiz ? (
+                            <button
+                                onClick={() => setIsAddingQuiz(true)}
+                                className="w-full py-2.5 border-2 border-dashed border-purple-300 text-purple-600 rounded-md text-sm font-medium hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                            >
+                                + Buat Kuis untuk Modul Ini
+                            </button>
+                        ) : (
+                            <form onSubmit={handleCreateQuiz} className="p-4 border border-purple-100 bg-purple-50 rounded-md">
+                                <h5 className="font-medium text-sm mb-3 text-purple-900">Buat Kuis Baru</h5>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs text-gray-600 mb-1">Judul Kuis</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={quizTitle}
+                                            onChange={(e) => setQuizTitle(e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-600 mb-1">Nilai Kelulusan Minimum (KKM %)</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            required
+                                            value={passingScore}
+                                            onChange={(e) => setPassingScore(Number(e.target.value))}
+                                            className="w-24 p-2 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                    <label className="flex items-start gap-2 text-sm mt-2 cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isRandomized}
+                                            onChange={(e) => setIsRandomized(e.target.checked)}
+                                            className="mt-1 rounded text-purple-600 focus:ring-purple-500"
+                                        />
+                                        <div>
+                                            <span className="font-medium text-gray-700">Acak Urutan Soal (Siswa)</span>
+                                            <p className="text-xs text-gray-500">Jika dicentang, siswa akan menerima soal dengan urutan acak setiap kali mengerjakan.</p>
+                                        </div>
+                                    </label>
+                                    <div className="flex gap-2 pt-2">
+                                        <button type="submit" disabled={isPending} className="bg-purple-600 text-white px-3 py-1.5 text-sm rounded hover:bg-purple-700 disabled:opacity-50">
+                                            Simpan Kuis
+                                        </button>
+                                        <button type="button" disabled={isPending} onClick={() => setIsAddingQuiz(false)} className="text-gray-600 px-3 py-1.5 text-sm hover:bg-gray-200 rounded">
+                                            Batal
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Inline Quiz Builder */}
+                        {isQuizModalOpen && module.quiz && (
+                            <div className="mt-4 border-2 border-purple-100 rounded-lg overflow-hidden bg-white">
+                                <QuizBuilderModal
+                                    quiz={module.quiz}
+                                    onClose={() => setIsQuizModalOpen(false)}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

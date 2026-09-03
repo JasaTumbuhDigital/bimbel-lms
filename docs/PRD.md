@@ -1,11 +1,15 @@
 # Product Requirements Document (PRD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.2
-**Tanggal:** 25 Agustus 2026
+**Versi:** 2.4
+**Tanggal:** 2 September 2026
 **Status:** Draft
 **Owner:** [Nama kamu]
 
+> **Ringkasan perubahan v2.4:** FR-11 relasinya dipindah dari per-lesson jadi **per-modul** (sejajar dengan lesson sebagai sub-materi, sesuai bahasa asli FR-7). Kelulusan kuis dipertegas sebagai **murni informasional** — tidak lagi ada mekanisme "otomatis menandai lesson selesai" yang sempat disebut di v2.3.
+>
+> **Ringkasan perubahan v2.3:** FR-11/FR-12 (kuis) dirombak konsepnya — kuis sekarang jadi **post-test per lesson** dengan passing grade, bukan modul "ujian" berdiri sendiri dengan riwayat percobaan penuh. Kelulusan kuis otomatis menandai lesson selesai (menggantikan tombol manual untuk lesson yang punya kuis). FR-12 tidak lagi soal "riwayat percobaan" — cukup status lulus & skor terbaik. Ide "ujian/exam standalone" (berdiri sendiri setara modul, bisa macam-macam jenis soal, ada timer) dicatat sebagai kandidat fitur terpisah di masa depan, lihat Implementation-Plan.md §4 Fase 11.
+>
 > **Ringkasan perubahan v2.2:** FR-38 diubah dari single tingkatan (nullable) jadi many-to-many + flag eksplisit `visible_to_all_levels`; kepemilikan kursus oleh tutor jadi many-to-many (co-teaching, FR-40); scoping akses tutor dipertegas (FR-41). FR-10 (dokumen PDF/PPT + preview) sempat dipertimbangkan pindah ke Tier 2, tapi **dikonfirmasi tetap di Tier 1** dengan skema Google Docs Viewer — library rendering khusus dicatat sebagai opsi upgrade custom quote, bukan default.
 >
 > **Ringkasan perubahan dari v1.0:** Produk direposisi dari "rebuild khusus untuk Zest College" menjadi **template LMS yang dijual berkali-kali sebagai project** ke berbagai institusi bimbel berbeda. Model bisnis: jual project (one-time, kepemilikan pindah ke klien) + opsional retainer maintenance — **bukan** SaaS subscription multi-tenant. Setiap klien mendapat deployment & database sendiri-sendiri (single-tenant per instance), bukan berbagi satu sistem.
@@ -179,11 +183,13 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-10 (P1, T1):** Sistem harus mendukung upload dokumen materi (PDF, PPT) dengan preview langsung di browser tanpa perlu download.
   - Catatan implementasi: skema awal pakai Google Docs Viewer untuk preview PPT/PPTX (lihat TSD Course & Content Module §6.4). Jika ada klien yang butuh pendekatan lain (misal keberatan file dikirim ke pihak ketiga untuk preview), evaluasi library rendering khusus (`@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, `pptx-glimpse`) sebagai custom quote — bukan bagian template standar.
 
-### 5.3 Kuis
-- **FR-11 (P0, T1):** Tutor harus bisa membuat kuis pilihan ganda dengan penilaian otomatis.
-- **FR-12 (P0, T1):** Siswa harus bisa melihat riwayat percobaan kuis (skor & waktu) di dashboard mereka.
-  - Edge case: keputusan bisnis default — skor final yang ditampilkan adalah **skor tertinggi** dari seluruh percobaan (dapat dikonfigurasi per klien jika diperlukan).
+### 5.3 Kuis (Post-Test per Modul)
+- **FR-11 (P0, T1):** Tutor/admin harus bisa membuat kuis pilihan ganda **per modul** (post-test, sejajar dengan lesson sebagai sub-materi) dengan penilaian otomatis dan **passing grade** (default 70%, bisa diubah per kuis).
+  - Catatan implementasi: 1 modul maksimal punya 1 kuis. Kelulusan kuis **murni informasional** (badge status) — **tidak** menggerbang penandaan lesson mana pun, tidak mempengaruhi progress bar kursus, dan tidak mengunci modul berikutnya. FR-9 (penandaan manual lesson) tidak terdampak sama sekali. Lihat TSD-Quiz.md v3.0.
+- **FR-12 (P0, T1):** Siswa harus bisa melihat status kelulusan & skor terbaik tiap kuis modul yang pernah dikerjakan.
+  - Sistem **tidak** menyimpan riwayat kronologis tiap percobaan (waktu tiap attempt) — hanya status agregat per kuis: sudah lulus/belum, dan skor terbaik. Siswa boleh mengulang kuis tanpa batas; skor terbaik selalu di-*override* naik, status lulus tidak pernah turun setelah tercapai.
 - **FR-13 (P1, T2):** Sistem harus mendukung kuis dengan timer, otomatis submit saat waktu habis, dan menampilkan pembahasan soal setelah selesai.
+- **FR-11b (Kandidat, belum diprioritaskan — T1/T2 lanjutan):** Modul **ujian/exam standalone** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), mendukung berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, dan (kemungkinan) benar-benar menggerbang kelulusan kursus — untuk kebutuhan sertifikasi yang lebih formal. Draft teknis awal sudah ada (TSD-Exam-Standalone-DRAFT.md) tapi perlu direvisit & diprioritaskan terpisah — belum masuk fase manapun di Implementation Plan saat ini.
 
 ### 5.4 Dashboard Siswa
 - **FR-14 (P0, T1):** Dashboard harus menampilkan ringkasan real-time: jumlah kursus enrolled, aktif, selesai.
@@ -278,7 +284,8 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 
 ### 7.4 Open Items
 - Validasi fitur & harga dengan calon klien nyata pertama (pendekatan iteratif lewat proses sales, lihat §1.2)
-- Kebijakan default skor kuis final (tertinggi vs terakhir) — sudah ditetapkan default di FR-12, tapi perlu dikonfirmasi apakah perlu dibuat configurable per klien
+- ~~Kebijakan default skor kuis final (tertinggi vs terakhir)~~ — **selesai**: kuis sekarang model post-test per modul dengan passing grade, skor terbaik selalu di-*override* naik, lihat FR-12 & TSD-Quiz.md v3.0
+- Prioritas & timeline modul ujian/exam standalone (FR-11b) — belum diputuskan mau masuk Tier 1 lanjutan atau Tier 2
 - Cakupan & durasi maintenance retainer pasca-serah-terima project (perlu didefinisikan di kontrak, bukan bagian teknis PRD ini)
 - Kejelasan kepemilikan infrastruktur: apakah klien pakai akun Supabase/Vercel mereka sendiri, atau tetap dikelola oleh kamu dengan biaya hosting terpisah — ini perlu diputuskan per deal dan didokumentasikan di serah terima
 
