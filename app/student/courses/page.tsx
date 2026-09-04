@@ -38,19 +38,19 @@ export default async function StudentCoursesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {courses.map((course, index) => {
                             const isEnrolled = (course as any).enrollments && (course as any).enrollments.length > 0;
-                            
+
                             const fullImageUrl = getPublicUrl(course.thumbnailUrl || null);
 
                             return (
-                                <Link 
-                                    href={`/student/courses/${course.id}`} 
+                                <Link
+                                    href={`/student/courses/${course.id}`}
                                     key={course.id}
                                     className="group flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
                                 >
                                     {/* Thumbnail */}
                                     <div className="relative w-full aspect-video bg-slate-100 border-b border-slate-100">
                                         {fullImageUrl ? (
-                                            <Image 
+                                            <Image
                                                 src={fullImageUrl}
                                                 alt={course.title}
                                                 fill
@@ -65,7 +65,7 @@ export default async function StudentCoursesPage() {
                                                 </svg>
                                             </div>
                                         )}
-                                        
+
                                         {/* Badge Enrolled */}
                                         {isEnrolled && (
                                             <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm uppercase tracking-wide">
@@ -82,7 +82,7 @@ export default async function StudentCoursesPage() {
                                         <p className="text-sm text-slate-600 line-clamp-2 flex-grow mb-4">
                                             {course.description || "Tidak ada deskripsi."}
                                         </p>
-                                        
+
                                         <div className="flex items-center justify-between text-xs text-slate-500 mt-auto pt-4 border-t border-slate-100">
                                             <span className="flex items-center gap-1">
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

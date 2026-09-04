@@ -31,6 +31,25 @@ export default async function QuizPlayerPage(props: { params: Promise<{ id: stri
         redirect(`/student/courses/${course.id}`);
     }
 
+    // Find next lesson or quiz URL after this quiz
+    let nextLessonUrl: string | null = null;
+    let foundCurrentQuiz = false;
+    
+    for (const module of course.modules) {
+        if (foundCurrentQuiz) {
+            if (module.lessons.length > 0) {
+                nextLessonUrl = `/student/courses/${course.id}/learn/${module.lessons[0].id}`;
+                break;
+            } else if (module.quiz) {
+                nextLessonUrl = `/student/courses/${course.id}/quiz/${module.quiz.id}`;
+                break;
+            }
+        }
+        if (module.quiz?.id === params.quizId) {
+            foundCurrentQuiz = true;
+        }
+    }
+
     return (
         <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden">
             {/* Sidebar Kurikulum - MIRIP SEPERTI LEARN PAGE */}
@@ -118,8 +137,8 @@ export default async function QuizPlayerPage(props: { params: Promise<{ id: stri
                     </Link>
                 </div>
 
-                <div className="p-4 md:p-8 max-w-4xl mx-auto w-full flex-1">
-                    <StudentQuizClient quiz={quiz} courseId={course.id} />
+                <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1">
+                    <StudentQuizClient quiz={quiz} courseId={course.id} nextLessonUrl={nextLessonUrl} />
                 </div>
             </div>
         </div>

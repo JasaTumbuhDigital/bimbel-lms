@@ -3,6 +3,7 @@ import { getCourseById } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { getPublicUrl } from "@/lib/supabase-storage";
 import Link from "next/link";
+import DocumentViewer from "@/components/course/DocumentViewer";
 
 export const metadata = {
     title: "Preview Materi Eksplorasi - Tutor",
@@ -62,10 +63,9 @@ export default async function TutorExploreCoursePlayerPage(props: { params: Prom
 
 
 
-    let documentEmbedUrl = "";
+    let documentPublicUrl = "";
     if (currentLesson.contentType === "document" && currentLesson.documentUrl) {
-        const fullUrl = getPublicUrl(currentLesson.documentUrl) || "";
-        documentEmbedUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+        documentPublicUrl = getPublicUrl(currentLesson.documentUrl) || "";
     }
 
     return (
@@ -127,7 +127,7 @@ export default async function TutorExploreCoursePlayerPage(props: { params: Prom
                     </Link>
                 </div>
 
-                <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex-1 flex flex-col">
+                <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col">
 
                     {/* Header Materi */}
                     <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -150,11 +150,8 @@ export default async function TutorExploreCoursePlayerPage(props: { params: Prom
                             ></iframe>
                         )}
 
-                        {currentLesson.contentType === "document" && documentEmbedUrl && (
-                            <iframe
-                                src={documentEmbedUrl}
-                                className="w-full h-full min-h-[600px] border-0"
-                            ></iframe>
+                        {currentLesson.contentType === "document" && documentPublicUrl && (
+                            <DocumentViewer url={documentPublicUrl} />
                         )}
 
                         {!currentLesson.videoUrl && !currentLesson.documentUrl && (

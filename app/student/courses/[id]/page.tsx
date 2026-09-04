@@ -24,7 +24,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
     }
 
     const isEnrolled = course.enrollments && course.enrollments.length > 0;
-    
+
     // Temukan lesson pertama untuk tombol "Lanjutkan Belajar"
     let firstLessonId: string | null = null;
     let totalLessons = 0;
@@ -52,11 +52,11 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
             {/* Header / Hero Section */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    
+
                     {/* Thumbnail */}
                     <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 flex-shrink-0">
                         {fullImageUrl ? (
-                            <Image 
+                            <Image
                                 src={fullImageUrl}
                                 alt={course.title}
                                 fill
@@ -82,10 +82,10 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                         <p className="text-slate-600 leading-relaxed text-sm md:text-base">
                             {course.description || "Tidak ada deskripsi kursus yang tersedia."}
                         </p>
-                        
+
                         <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
                             {isEnrolled ? (
-                                <Link 
+                                <Link
                                     href={firstLessonId ? `/student/courses/${course.id}/learn/${firstLessonId}` : "#"}
                                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all text-center"
                                 >
@@ -94,7 +94,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                             ) : (
                                 <EnrollButton courseId={course.id} />
                             )}
-                            
+
                             <div className="text-sm text-slate-500 font-medium bg-slate-100 px-4 py-2 rounded-lg">
                                 {course.modules.length} Modul &bull; {totalLessons} Materi
                             </div>
@@ -107,8 +107,8 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                     <span className="text-slate-500">{completedLessons} / {totalLessons} Materi ({progressPercentage}%)</span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2">
-                                    <div 
-                                        className={`h-2 rounded-full ${isCourseCompleted ? 'bg-green-500' : 'bg-blue-600'}`} 
+                                    <div
+                                        className={`h-2 rounded-full ${isCourseCompleted ? 'bg-green-500' : 'bg-blue-600'}`}
                                         style={{ width: `${progressPercentage}%` }}
                                     ></div>
                                 </div>
@@ -127,7 +127,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
             {/* Kurikulum / Daftar Modul */}
             <div className="max-w-3xl mx-auto px-6 py-12">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Kurikulum Kursus</h2>
-                
+
                 {course.modules.length === 0 ? (
                     <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
                         Belum ada modul materi di kursus ini.
@@ -142,7 +142,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                         Modul {index + 1}: {module.title}
                                     </h3>
                                 </div>
-                                
+
                                 {/* Lessons List */}
                                 <div className="divide-y divide-slate-100">
                                     {module.lessons.length === 0 ? (
@@ -151,33 +151,33 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                         module.lessons.map((lesson, lIndex) => {
                                             const isDone = (lesson as any).progress && (lesson as any).progress.length > 0 && (lesson as any).progress[0].isCompleted;
                                             return (
-                                            <div key={lesson.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDone ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                        {isDone ? (
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                                        ) : (
-                                                            `${index + 1}.${lIndex + 1}`
-                                                        )}
+                                                <div key={lesson.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${isDone ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                            {isDone ? (
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                                            ) : (
+                                                                `${index + 1}.${lIndex + 1}`
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-medium text-slate-700">{lesson.title}</h4>
+                                                            <p className="text-[11px] text-slate-500 uppercase mt-0.5 tracking-wider">{lesson.contentType}</p>
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-sm font-medium text-slate-700">{lesson.title}</h4>
-                                                        <p className="text-[11px] text-slate-500 uppercase mt-0.5 tracking-wider">{lesson.contentType}</p>
+                                                        {isEnrolled ? (
+                                                            <Link
+                                                                href={`/student/courses/${course.id}/learn/${lesson.id}`}
+                                                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                            >
+                                                                Buka
+                                                            </Link>
+                                                        ) : (
+                                                            <span className="text-sm font-medium text-slate-400">Terkunci</span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    {isEnrolled ? (
-                                                        <Link 
-                                                            href={`/student/courses/${course.id}/learn/${lesson.id}`}
-                                                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                                                        >
-                                                            Buka
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="text-sm font-medium text-slate-400">Terkunci</span>
-                                                    )}
-                                                </div>
-                                            </div>
                                             );
                                         })
                                     )}
@@ -199,7 +199,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                             </div>
                                             <div>
                                                 {isEnrolled ? (
-                                                    <Link 
+                                                    <Link
                                                         href={`/student/courses/${course.id}/quiz/${module.quiz.id}`}
                                                         className="text-sm font-medium text-purple-700 hover:text-purple-900 hover:underline"
                                                     >

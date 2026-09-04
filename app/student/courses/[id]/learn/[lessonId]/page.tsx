@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "@/lib/data/auth";
 import { getPublicUrl } from "@/lib/supabase-storage";
 import Link from "next/link";
 import MarkAsDoneButton from "@/components/course/MarkAsDoneButton";
+import DocumentViewer from "@/components/course/DocumentViewer";
 
 export const metadata = {
     title: "Pemutar Materi - Student",
@@ -64,18 +65,34 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
 
     const flatIndex = allLessons.findIndex(l => l.id === params.lessonId);
     const prevLesson = flatIndex > 0 ? allLessons[flatIndex - 1] : null;
-    const nextLesson = flatIndex < allLessons.length - 1 ? allLessons[flatIndex + 1] : null;
-    const nextLessonUrl = nextLesson ? `/student/courses/${course.id}/learn/${nextLesson.id}` : null;
+    
+    const currentModule = course.modules[currentModuleIndex];
+    const isLastLessonInModule = currentLessonIndex === currentModule.lessons.length - 1;
+    const moduleQuiz = currentModule?.quiz ?? null;
+    
+    let nextLessonUrl = null;
+    let hasQuizNext = false;
+    let nextLesson = null;
+
+    if (isLastLessonInModule && moduleQuiz) {
+        // Jika ini lesson terakhir di modul dan ada kuis, maka selanjutnya adalah kuis
+        nextLessonUrl = `/student/courses/${course.id}/quiz/${moduleQuiz.id}`;
+        hasQuizNext = true;
+    } else {
+        // Lanjut ke lesson berikutnya di flat array (di modul yang sama, atau awal modul berikutnya)
+        nextLesson = flatIndex < allLessons.length - 1 ? allLessons[flatIndex + 1] : null;
+        if (nextLesson) {
+            nextLessonUrl = `/student/courses/${course.id}/learn/${nextLesson.id}`;
+        }
+    }
 
     const isCompleted = currentLesson.progress && currentLesson.progress.length > 0 && currentLesson.progress[0].isCompleted;
 
 
 
-    let documentEmbedUrl = "";
+    let documentPublicUrl = "";
     if (currentLesson.contentType === "document" && currentLesson.documentUrl) {
-        const fullUrl = getPublicUrl(currentLesson.documentUrl) || "";
-        // Gunakan Google Docs Viewer untuk semua dokumen (PDF, PPT, DOCX) agar tampilan konsisten & clean di semua browser (Chrome, Firefox, Safari)
-        documentEmbedUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+        documentPublicUrl = getPublicUrl(currentLesson.documentUrl) || "";
     }
 
     return (
@@ -167,7 +184,7 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
                     </Link>
                 </div>
 
-                <div className="p-4 md:p-8 max-w-5xl mx-auto w-full flex-1 flex flex-col">
+                <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 flex flex-col">
 
                     {/* Header Materi */}
                     <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -199,11 +216,8 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
                             ></iframe>
                         )}
 
-                        {currentLesson.contentType === "document" && documentEmbedUrl && (
-                            <iframe
-                                src={documentEmbedUrl}
-                                className="w-full h-full min-h-[600px] border-0"
-                            ></iframe>
+                        {currentLesson.contentType === "document" && documentPublicUrl && (
+                            <DocumentViewer url={documentPublicUrl} />
                         )}
 
                         {!currentLesson.videoUrl && !currentLesson.documentUrl && (
@@ -226,12 +240,14 @@ export default async function CoursePlayerPage(props: { params: Promise<{ id: st
                             <div></div>
                         )}
 
-                        {nextLesson ? (
+                        {nextLesson || hasQuizNext ? (
                             <Link
                                 href={nextLessonUrl!}
-                                className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm"
+                                className={`flex items-center gap-2 text-sm font-medium transition-colors bg-white px-4 py-2 rounded-lg border shadow-sm ${
+                                    hasQuizNext ? 'text-purple-600 hover:text-purple-700 border-purple-200 hover:bg-purple-50' : 'text-slate-600 hover:text-blue-600 border-slate-200 hover:bg-slate-50'
+                                }`}
                             >
-                                Selanjutnya <span>&rarr;</span>
+                                {hasQuizNext ? 'Kerjakan Kuis' : 'Selanjutnya'} <span>&rarr;</span>
                             </Link>
                         ) : (
                             <div className="text-sm font-medium text-green-600 flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
