@@ -25,9 +25,11 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
     // Hitung statistik pelajaran
     let firstLessonId: string | null = null;
     let totalLessons = 0;
+    let totalQuizzes = 0;
 
     course.modules.forEach((module) => {
         totalLessons += module.lessons.length;
+        if (module.quiz) totalQuizzes++;
         if (!firstLessonId && module.lessons.length > 0) {
             firstLessonId = module.lessons[0].id;
         }
@@ -40,11 +42,11 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
             {/* Header / Hero Section */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    
+
                     {/* Thumbnail */}
                     <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 flex-shrink-0">
                         {fullImageUrl ? (
-                            <Image 
+                            <Image
                                 src={fullImageUrl}
                                 alt={course.title}
                                 fill
@@ -70,17 +72,17 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
                         <p className="text-slate-600 leading-relaxed text-sm md:text-base">
                             {course.description || "Tidak ada deskripsi kursus yang tersedia."}
                         </p>
-                        
+
                         <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
-                            <Link 
+                            <Link
                                 href={firstLessonId ? `/tutor/explore/${course.id}/learn/${firstLessonId}` : "#"}
                                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all text-center"
                             >
                                 {firstLessonId ? "Mulai Eksplorasi" : "Belum Ada Materi"}
                             </Link>
-                            
+
                             <div className="text-sm text-slate-500 font-medium bg-slate-100 px-4 py-2 rounded-lg">
-                                {course.modules.length} Modul &bull; {totalLessons} Materi
+                                {course.modules.length} Modul &bull; {totalLessons} Materi &bull; {totalQuizzes} Kuis
                             </div>
                         </div>
                     </div>
@@ -90,7 +92,7 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
             {/* Kurikulum / Daftar Modul */}
             <div className="max-w-3xl mx-auto px-6 py-12">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Kurikulum Kursus</h2>
-                
+
                 {course.modules.length === 0 ? (
                     <div className="p-8 text-center bg-white border border-slate-200 rounded-xl text-slate-500">
                         Belum ada modul materi di kursus ini.
@@ -105,7 +107,7 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
                                         Modul {index + 1}: {module.title}
                                     </h3>
                                 </div>
-                                
+
                                 {/* Lessons List */}
                                 <div className="divide-y divide-slate-100">
                                     {module.lessons.length === 0 ? (
@@ -113,27 +115,46 @@ export default async function TutorExploreCourseDetailPage(props: { params: Prom
                                     ) : (
                                         module.lessons.map((lesson, lIndex) => {
                                             return (
-                                            <div key={lesson.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-blue-100 text-blue-700`}>
-                                                        {`${index + 1}.${lIndex + 1}`}
+                                                <div key={lesson.id} className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-blue-100 text-blue-700`}>
+                                                            {`${index + 1}.${lIndex + 1}`}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-medium text-slate-700">{lesson.title}</h4>
+                                                            <p className="text-[11px] text-slate-500 uppercase mt-0.5 tracking-wider">{lesson.contentType}</p>
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-sm font-medium text-slate-700">{lesson.title}</h4>
-                                                        <p className="text-[11px] text-slate-500 uppercase mt-0.5 tracking-wider">{lesson.contentType}</p>
+                                                        <Link
+                                                            href={`/tutor/explore/${course.id}/learn/${lesson.id}`}
+                                                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                                        >
+                                                            Buka
+                                                        </Link>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <Link 
-                                                        href={`/tutor/explore/${course.id}/learn/${lesson.id}`}
-                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                                                    >
-                                                        Buka
-                                                    </Link>
-                                                </div>
-                                            </div>
                                             );
                                         })
+                                    )}
+                                    {/* Quiz Preview — Read Only */}
+                                    {module.quiz && (
+                                        <div className="flex items-center justify-between px-6 py-4 bg-purple-50 hover:bg-purple-100/50 transition-colors border-t border-purple-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-purple-100 text-purple-700">
+                                                    Q
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-medium text-purple-900">Evaluasi: {module.quiz.title}</h4>
+                                                    <p className="text-[11px] text-purple-600 uppercase mt-0.5 tracking-wider">
+                                                        Kuis Modul
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-medium text-purple-400 bg-purple-100 px-2 py-1 rounded">
+                                                Preview Only
+                                            </span>
+                                        </div>
                                     )}
                                 </div>
                             </div>
