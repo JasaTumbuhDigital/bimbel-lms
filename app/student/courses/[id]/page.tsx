@@ -5,6 +5,10 @@ import { getPublicUrl } from "@/lib/supabase-storage";
 import Image from "next/image";
 import Link from "next/link";
 import EnrollButton from "@/components/course/EnrollButton";
+import { WishlistButton } from "@/components/student/wishlist-button";
+import { CourseReviewSection } from "@/components/student/course-review-section";
+import { getCourseReviewsData, getStudentReviewForCourse } from "@/lib/data/review";
+import { prisma } from "@/lib/prisma";
 
 export const metadata = {
     title: "Detail Kursus - Student",
@@ -24,6 +28,25 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
     }
 
     const isEnrolled = course.enrollments && course.enrollments.length > 0;
+
+    // --- Data Wishlist & Reviews ---
+    const studentId = user.studentProfile?.id;
+    let isWishlisted = false;
+    let studentReview = null;
+
+    if (studentId) {
+        const existingWishlist = await prisma.wishlist.findUnique({
+            where: { studentId_courseId: { studentId, courseId: course.id } }
+        });
+        isWishlisted = !!existingWishlist;
+
+        if (isEnrolled) {
+            studentReview = await getStudentReviewForCourse(course.id);
+        }
+    }
+    
+    const { reviews } = await getCourseReviewsData(course.id);
+    // ---------------------------------
 
     // Temukan lesson pertama untuk tombol "Lanjutkan Belajar"
     let firstLessonId: string | null = null;
@@ -92,7 +115,10 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                                     {firstLessonId ? "Lanjutkan Belajar" : "Belum Ada Materi"}
                                 </Link>
                             ) : (
-                                <EnrollButton courseId={course.id} />
+                                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                    <EnrollButton courseId={course.id} />
+                                    <WishlistButton courseId={course.id} initialIsWishlisted={isWishlisted} />
+                                </div>
                             )}
 
                             <div className="text-sm text-slate-500 font-medium bg-slate-100 px-4 py-2 rounded-lg">
@@ -216,6 +242,16 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                         ))}
                     </div>
                 )}
+            </div>
+
+            {/* Bagian Ulasan (Review) */}
+            <div className="max-w-3xl mx-auto px-6 pb-12">
+                <CourseReviewSection 
+                    courseId={course.id}
+                    isEnrolled={isEnrolled}
+                    studentReview={studentReview}
+                    reviews={reviews as any}
+                />
             </div>
         </div>
     );

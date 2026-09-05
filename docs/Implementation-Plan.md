@@ -142,6 +142,12 @@
 - [ ] Dashboard real-time: enrolled/aktif/selesai
 - [ ] Wishlist: simpan/hapus kursus
 - [ ] Reviews: rating & ulasan kursus yang sudah diikuti
+  - Sertakan **ringkasan rating** (rata-rata, total ulasan, bintang) di atas daftar ulasan — sudah diimplementasikan.
+  - Pola paginasi: load semua ulasan tanpa batasan di fase ini (data masih sedikit). Threshold "Load More" akan diaktifkan di **Fase 11** saat data bertambah.
+
+> **Keputusan Desain UX (disetujui):**
+> - **Ulasan (Reviews):** Gunakan pola **"Muat Lebih Banyak" (Load More)** — user klik tombol untuk memuat ulasan berikutnya secara eksplisit. Bukan infinite scroll otomatis agar footer tetap dapat diakses.
+> - **Katalog Kursus (`/student/courses`):** Gunakan pola **Infinite Scroll otomatis** saat kursus aktif ≥ 30 item — dikombinasikan dengan fitur Pencarian & Filter Kelas.
 
 **Terkait:** FR-14, FR-15, FR-16
 
@@ -210,6 +216,8 @@ Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, d
 - Sertifikat otomatis (@react-pdf/renderer)
 - Forum Q&A per kursus
 - Kuis (post-test modul, Fase 3) dengan timer & pembahasan otomatis — FR-13
+- **Paginasi Ulasan (FR-16):** Implementasi "Load More" aktif — fetch 10 ulasan pertama, muat 10 lagi per klik tombol; menggunakan cursor-based pagination di Prisma (`take`/`skip` atau `cursor`). Ini adalah kelanjutan langsung dari keputusan desain di Fase 4.
+- **Infinite Scroll Katalog Kursus:** Implementasi infinite scroll di `/student/courses` jika jumlah kursus aktif sudah mendekati 30+; dikombinasikan dengan fitur Pencarian dan Filter Kelas.
 - **Modul Ujian/Exam standalone (FR-11b, kandidat baru)** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, kemungkinan benar-benar menggerbang kelulusan kursus untuk kebutuhan sertifikasi. Draft teknis awal sudah ada: **TSD-Exam-Standalone-DRAFT.md** (perlu direvisit total sebelum dipakai — ditulis dengan asumsi lama sebelum Fase 3 dirombak jadi post-test ringan). Belum diprioritaskan vs fitur Fase 11 lain, evaluasi bareng saat fase ini mulai dikerjakan.
 - *(Opsional, jika ada permintaan klien)* Upgrade preview dokumen dari Google Docs Viewer ke library khusus — `@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, atau `pptx-glimpse` — evaluasi saat kebutuhan itu muncul, bukan default
 

@@ -189,12 +189,14 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-12 (P0, T1):** Siswa harus bisa melihat status kelulusan & skor terbaik tiap kuis modul yang pernah dikerjakan.
   - Sistem **tidak** menyimpan riwayat kronologis tiap percobaan (waktu tiap attempt) — hanya status agregat per kuis: sudah lulus/belum, dan skor terbaik. Siswa boleh mengulang kuis tanpa batas; skor terbaik selalu di-*override* naik, status lulus tidak pernah turun setelah tercapai.
 - **FR-13 (P1, T2):** Sistem harus mendukung kuis dengan timer, otomatis submit saat waktu habis, dan menampilkan pembahasan soal setelah selesai.
-- **FR-11b (Kandidat, belum diprioritaskan — T1/T2 lanjutan):** Modul **ujian/exam standalone** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), mendukung berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, dan (kemungkinan) benar-benar menggerbang kelulusan kursus — untuk kebutuhan sertifikasi yang lebih formal. Draft teknis awal sudah ada (TSD-Exam-Standalone-DRAFT.md) tapi perlu direvisit & diprioritaskan terpisah — belum masuk fase manapun di Implementation Plan saat ini.
+- **FR-11b (Kandidat, belum diprioritaskan — T1/T2 lanjutan):** Modul **ujian/exam standalone** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), mendukung berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, dan (kemungkinan) benar-benar menggerbang kelulusan kursus — untuk kebutuhan sertifikasi yang lebih formal. Draft teknis awal sudah ada (TSD-Exam-Standalone-DRAFT.md) tapi perlu diper-revisit & diprioritaskan terpisah — belum masuk fase manapun di Implementation Plan saat ini.
 
 ### 5.4 Dashboard Siswa
 - **FR-14 (P0, T1):** Dashboard harus menampilkan ringkasan real-time: jumlah kursus enrolled, aktif, selesai.
 - **FR-15 (P1, T1):** Dashboard harus menampilkan wishlist kursus yang belum diambil.
 - **FR-16 (P1, T1):** Siswa harus bisa memberi rating & ulasan (review) pada kursus yang sudah diikuti; ulasan tampil di halaman detail kursus.
+  - Catatan UX skalabilitas: tampilkan ringkasan rating (angka rata-rata + total ulasan + bintang) di bagian atas section review sebagai gambaran cepat. Daftar ulasan individual dimuat secara **bertahap dengan tombol "Muat Lebih Banyak"** (bukan infinite scroll otomatis) — threshold: tampilkan 10 ulasan pertama, muat 10 lagi per klik. Pola ini berlaku mulai awal meski data masih sedikit, agar tidak perlu refactor saat data bertambah banyak.
+  - Threshold implementasi pagination: wajib diaktifkan aktif di Fase 11 (optimasi lanjutan) — implementasi awal (Fase 4) boleh load semua ulasan tanpa batasan, karena data masih sangat sedikit.
 - **FR-17 (P2, T2):** Dashboard harus menampilkan leaderboard/badge sebagai elemen gamifikasi.
 
 ### 5.5 Portal Orang Tua *(T2)*
@@ -239,6 +241,8 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 | **Performance** | Landing page harus mencapai skor Lighthouse Performance ≥ 90 (mobile), First Contentful Paint < 1.5 detik |
 | **Performance** | Response time operasi standar < 500ms di p95 (di luar operasi berat seperti generate PDF) |
 | **Scalability** | Sistem harus mampu menangani minimal 100–200 concurrent users per instance klien tanpa degradasi signifikan — wajar untuk skala bimbel kecil-menengah single-tenant |
+| **Scalability (UX)** | **Ulasan kursus (FR-16):** Gunakan pola **"Load More" / "Muat Lebih Banyak"** — user mengklik tombol untuk memuat ulasan berikutnya secara eksplisit (bukan infinite scroll otomatis). Alasan: mencegah footer tertimpa scroll, memberi kontrol penuh ke user, dan lebih hemat bandwidth. |
+| **Scalability (UX)** | **Katalog kursus siswa (`/student/courses`):** Gunakan pola **infinite scroll otomatis** saat jumlah kursus aktif melampaui ±30 item — pola ini cocok untuk katalog visual (thumbnail berat) sehingga konten dimuat bertahap. Wajib dikombinasikan dengan fitur pencarian dan filter kelas saat diimplementasikan. |
 | **Availability** | Uptime target 99% per instance klien (di luar maintenance terjadwal), realistis dengan Vercel + Supabase free/pro tier |
 | **Security** | RLS Supabase wajib aktif di semua tabel berisi data personal; proteksi berbasis role (siswa/orang tua/tutor/admin) |
 | **Security** | Antisipasi dasar XSS & CSRF; kredensial (API key payment gateway, WA gateway) tidak boleh hardcoded, wajib via environment variable |

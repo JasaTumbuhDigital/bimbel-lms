@@ -43,6 +43,8 @@ model StudentProfile {
     enrollments      Enrollment[]
     lessonProgresses LessonProgress[]
     quizProgresses   QuizProgress[]
+    wishlists        Wishlist[]
+    reviews          Review[]
 
     @@index([classLevelId])
     @@map("student_profiles")
@@ -97,6 +99,8 @@ model Course {
     classLevels CourseClassLevel[]
     tutors      CourseTutor[]
     enrollments Enrollment[]
+    wishlists   Wishlist[]
+    reviews     Review[]
 
     @@map("courses")
 }
@@ -239,4 +243,33 @@ model QuizProgress {
 
     @@unique([studentId, quizId]) // 1 row per siswa per kuis
     @@map("quiz_progress")
+}
+
+model Wishlist {
+    id        String   @id @default(uuid())
+    studentId String   @map("student_id")
+    courseId  String   @map("course_id")
+    createdAt DateTime @default(now()) @map("created_at")
+
+    student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+    @@unique([studentId, courseId])
+    @@map("wishlists")
+}
+
+model Review {
+    id        String   @id @default(uuid())
+    studentId String   @map("student_id")
+    courseId  String   @map("course_id")
+    rating    Int // Skor bintang 1-5
+    comment   String?
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+    @@unique([studentId, courseId])
+    @@map("reviews")
 }
