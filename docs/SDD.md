@@ -1,11 +1,13 @@
 # Software Design Document (SDD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 1.3
+**Versi:** 1.4
 **Tanggal:** 2 September 2026
 **Terkait dokumen:** PRD.md (v2.4)
 **Cakupan dokumen:** Fokus desain **Tier 1 (Base MVP)**. Tier 2 dibahas sebagai *extension notes* di tiap section relevan (bukan didesain detail) — akan didetailkan ulang sebagai revisi SDD terpisah saat Tier 2 mulai dikerjakan, sesuai fase di Implementation Plan.
 
+> **Ringkasan perubahan v1.4:** `must_change_password` dipindah dari `student_profiles` ke `users` (berlaku semua role) — konsekuensi dari `createStudentAccount` yang digeneralisasi jadi `createUserAccount` (role: student/tutor/admin) di TSD-Auth-Account-Management.md v1.1. Detail lengkap & alasan: TSD-Auth-Account-Management.md v1.1 §3.1, TSD-Admin-Dashboard.md v1.1.
+>
 > **Ringkasan perubahan v1.3:** Relasi Quiz dipindah dari Lesson ke **Module** (1:1, sejajar dengan Lesson sebagai sub-materi, sesuai bahasa asli FR-7). Kelulusan kuis dipertegas **murni informasional** — tidak lagi mengisi `lesson_progress` secara otomatis seperti disebut di v1.2. Detail lengkap: TSD-Quiz.md v3.0.
 >
 > **Ringkasan perubahan v1.2:** Desain Quiz Module dirombak (§2 ERD, §4 Server Actions, §6.3 flow) — dari "riwayat percobaan penuh" (`quiz_attempts`/`quiz_answers`) menjadi post-test per lesson dengan `quiz_progress` (1 row agregat per siswa) & passing grade, kelulusan otomatis mengisi `lesson_progress`. Detail lengkap ada di TSD-Quiz.md v2.0. Desain lama dicatat sebagai kandidat fitur "exam standalone" terpisah di masa depan.
@@ -158,6 +160,7 @@ erDiagram
         enum role "student|tutor|admin"
         string avatar_url
         boolean is_active
+        boolean must_change_password "v1.4 — dipindah dari student_profiles, berlaku semua role"
         timestamp created_at
     }
 
@@ -165,7 +168,6 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid class_level_id FK
-        boolean must_change_password
         timestamp created_at
     }
 
@@ -300,7 +302,7 @@ erDiagram
 - **`COURSE_CLASS_LEVELS` (pivot) + flag `visible_to_all_levels`:** Merepresentasikan aturan bisnis FR-38 — satu kursus bisa terkait ke satu, beberapa, atau (via flag eksplisit) semua tingkatan. Flag dipilih eksplisit (bukan "relasi kosong = semua tingkatan") supaya admin tidak bisa secara tidak sengaja membuat kursus terbuka ke semua siswa hanya karena lupa mengisi relasi tingkatan — kondisi ini divalidasi saat publish (lihat FR-38 edge case).
 - **`COURSE_TUTORS` (pivot):** Satu kursus dapat diampu lebih dari satu tutor (co-teaching), dan satu tutor dapat mengampu banyak kursus — many-to-many murni. Tabel ini juga jadi dasar scoping akses tutor (FR-41): query "kursus milik tutor ini" dan "siswa yang relevan dengan tutor ini" selalu melalui tabel ini, bukan asumsi implisit dari `created_by`.
 - **`LESSON_PROGRESS` sebagai tabel tunggal untuk Tier 1 & Tier 2:** Struktur tabel ini sengaja dirancang cukup generik (`is_completed`, `completed_at`) agar kompatibel dipakai baik oleh alur manual (Tier 1, diisi lewat klik tombol) maupun alur otomatis (Tier 2/FR-39, diisi lewat kalkulasi durasi tonton) — menghindari migrasi skema saat upgrade tier (lihat Design Decisions §7.4).
-- **`must_change_password` di `student_profiles`:** Mendukung alur FR-2 (siswa wajib ganti password saat login pertama setelah dibuatkan admin).
+- **`must_change_password` di `users` (v1.4, dipindah dari `student_profiles`):** Awalnya cuma untuk siswa (FR-2), tapi karena semua akun (siswa/tutor/admin tambahan) sekarang dibuat lewat jalur `createUserAccount` yang sama (TSD-Auth-Account-Management.md v1.1), dan sistem belum ada verifikasi email (jadi admin-triggered reset jadi jalur cadangan utama untuk semua role), flag ini dipindah ke `users` supaya berlaku seragam.
 
 ### 3.4 Extension Notes — Tier 2
 Tabel tambahan yang **akan** diperlukan saat Tier 2 dikerjakan (tidak dibuat sekarang): `parent_profiles` + tabel pivot `parent_student_links` (many-to-many, satu orang tua bisa punya banyak anak), `orders`, `payments`, `live_classes`, `attendances`, `certificates`, `qna_threads`, `qna_replies`. Tidak didesain detail di dokumen ini karena berpotensi berubah signifikan tergantung pilihan payment gateway final & kebutuhan riil klien pertama.
@@ -395,6 +397,8 @@ Setiap modul di atas dipetakan langsung ke folder terpisah di struktur project (
 
 ### 6.1 Flow: Admin Membuat Akun Siswa & Login Pertama Kali
 
+> **Direvisi (2 September 2026, v1.4):** `createStudentAccount` sekarang generalisasi `createUserAccount` (role: student/tutor/admin) dan `must_change_password` pindah dari `student_profiles` ke `users` (berlaku semua role) — lihat TSD-Auth-Account-Management.md v1.1. Diagram di bawah tetap memakai contoh siswa (skenario paling sering) tapi flow-nya identik untuk role lain.
+
 ```mermaid
 sequenceDiagram
     actor Admin
@@ -405,7 +409,7 @@ sequenceDiagram
     actor Siswa
 
     Admin->>UI: Input data siswa (nama, email, no HP)
-    UI->>SA: createStudentAccount(data)
+    UI->>SA: createUserAccount({ role: "student", ...data })
     SA->>DB: Cek email sudah terdaftar?
     alt Email sudah ada
         DB-->>SA: Konflik ditemukan
@@ -414,7 +418,7 @@ sequenceDiagram
     else Email belum ada
         SA->>Auth: Buat user baru + password sementara
         Auth-->>SA: auth_id
-        SA->>DB: Insert users + student_profiles<br/>(class_level_id = default,<br/>must_change_password = true)
+        SA->>DB: Insert users<br/>(must_change_password = true)<br/>+ student_profiles (class_level_id = default)
         DB-->>SA: OK
         SA-->>UI: Sukses, tampilkan kredensial sementara
         UI-->>Admin: Kredensial siap dikirim manual (WA/email)
@@ -425,13 +429,13 @@ sequenceDiagram
     Siswa->>UI: Login dengan kredensial sementara
     UI->>Auth: Verifikasi login
     Auth-->>UI: Session valid
-    UI->>DB: Cek must_change_password
+    UI->>DB: Cek users.must_change_password
     alt must_change_password = true
         UI-->>Siswa: Paksa redirect ke halaman ganti password
         Siswa->>UI: Submit password baru
         UI->>SA: changePassword(newPassword)
         SA->>Auth: Update password
-        SA->>DB: Set must_change_password = false
+        SA->>DB: Set users.must_change_password = false
         SA-->>UI: Sukses
         UI-->>Siswa: Redirect ke dashboard siswa
     else must_change_password = false

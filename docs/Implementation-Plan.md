@@ -1,11 +1,13 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.5
+**Versi:** 2.6
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.3)
+**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.4)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.6:** Fase 1 (`createStudentAccount`) & Fase 5 (Admin Dashboard) disinkronkan — akun tutor & admin tambahan sekarang dibuat lewat 1 Server Action yang sama (`createUserAccount`, generalisasi dari `createStudentAccount`), dan `must_change_password` berlaku semua role (dipindah ke tabel `users`). Detail: TSD-Auth-Account-Management.md v1.1, TSD-Admin-Dashboard.md v1.1.
+>
 > **Ringkasan perubahan v2.5:** Fase 3 (Kuis) — relasi kuis dipindah dari per-lesson jadi **per-modul** (sejajar dengan lesson sebagai sub-materi). Kelulusan kuis dipertegas **murni informasional**, tidak lagi otomatis mengisi `lesson_progress` — revisi kecil yang sempat dibutuhkan di Fase 2 (`markLessonComplete`) jadi tidak perlu, Fase 2 & 3 sekarang independen satu arah.
 >
 > **Ringkasan perubahan v2.4:** Fase 3 (Kuis) dirombak — jadi post-test per lesson dengan passing grade (bukan modul ujian berdiri sendiri dengan riwayat percobaan), kelulusan otomatis menandai lesson selesai. Draft desain awal yang ternyata lebih cocok untuk "ujian standalone" dipindah jadi kandidat backlog baru di Fase 11.
@@ -77,7 +79,8 @@
    - Aktifkan RLS dasar per role (lihat SDD §8 — checklist detail policy per tabel disusun di TSD)
 4. **Setup Auth**
    - Integrasi Supabase Auth (`@supabase/ssr`) + Middleware role-based access
-   - Alur admin-created account (FR-2): lihat flow lengkap di SDD §6.1
+   - Alur admin-created account, generik untuk siswa (FR-2) — Server Action `createUserAccount` (TSD-Auth-Account-Management §4.2) sudah didesain generik untuk `role: student|tutor|admin` sejak awal, meski Fase 1 cuma perlu form siswa dulu (form tutor/admin menyusul di Fase 5): lihat flow lengkap di SDD §6.1
+   - **Bootstrap akun admin pertama** dilakukan manual oleh developer lewat Supabase Dashboard (bukan lewat UI) — didokumentasikan di README replikasi, satu-satunya akun yang tidak lewat `createUserAccount`
    - **Tidak** ada halaman "Daftar" publik di Tier 1 (baru di Fase 8)
 5. **Setup UI foundation**
    - shadcn/ui + Tailwind, warna default dari `config/institution.ts`
@@ -154,11 +157,11 @@
 ---
 
 ### Fase 5 — Dashboard Admin & Manajemen Akun Manual
-- [ ] Dashboard ringkas: total siswa, kursus, kelas berjalan
-- [ ] CRUD user (siswa/tutor), termasuk alur create akun manual dari Fase 1
+- [ ] Dashboard ringkas: total siswa, kursus, kelas berjalan (kelas berjalan = tingkatan dengan ≥1 siswa aktif)
+- [ ] CRUD user (siswa/tutor/admin) — pakai `createUserAccount` generik dari Fase 1, tambah UI list/edit/nonaktifkan/reset password (TSD-Admin-Dashboard.md)
 - [ ] CRUD kursus/modul/lesson (lengkapi dari Fase 2 jika perlu)
 
-**Terkait:** FR-29, FR-30, FR-31
+**Terkait:** FR-29, FR-30, FR-31 · TSD-Admin-Dashboard.md v1.1
 
 ---
 
