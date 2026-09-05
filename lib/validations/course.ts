@@ -12,5 +12,3 @@ export const courseSchema = z.object({
     classLevelIds: z.array(z.string()).default([]),
     tutorProfileIds: z.array(z.string()).default([]),
 });
-
-export type CourseInput = z.infer<typeof courseSchema>;

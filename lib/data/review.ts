@@ -43,3 +43,35 @@ export async function getStudentReviewForCourse(courseId: string) {
 
     return review;
 }
+
+// Untuk halaman Admin: mengambil semua ulasan dari semua kursus, diurutkan terbaru
+export async function getAllReviewsForAdmin() {
+    return prisma.review.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+            course: {
+                select: { id: true, title: true }
+            },
+            student: {
+                include: {
+                    user: { select: { name: true } }
+                }
+            }
+        }
+    });
+}
+
+// Untuk halaman Tutor: mengambil semua ulasan dari kursus yang dia ampu
+export async function getReviewsForTutorCourse(courseId: string) {
+    return prisma.review.findMany({
+        where: { courseId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+            student: {
+                include: {
+                    user: { select: { name: true, avatarUrl: true } }
+                }
+            }
+        }
+    });
+}
