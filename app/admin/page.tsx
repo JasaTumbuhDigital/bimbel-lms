@@ -76,6 +76,19 @@ export default function AdminDashboardPage() {
                             Buat kursus baru, kelola modul/materi, tingkatan kelas, dan atur penugasan tutor.
                         </p>
                     </Link>
+
+                    {/* Card 5: Manajemen Ulasan */}
+                    <Link
+                        href="/admin/reviews"
+                        className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+                    >
+                        <h2 className="text-base font-semibold text-slate-900 mb-1">
+                            Manajemen Ulasan &rarr;
+                        </h2>
+                        <p className="text-xs text-slate-600">
+                            Pantau dan moderasi ulasan siswa dari seluruh kursus. Hapus ulasan yang tidak pantas.
+                        </p>
+                    </Link>
                 </section>
             </div>
         </div>

@@ -8,5 +8,3 @@ export const classLevelSchema = z.object({
     description: z.string().optional(),
     isDefault: z.boolean().default(false),
 });
-
-export type ClassLevelInput = z.infer<typeof classLevelSchema>;

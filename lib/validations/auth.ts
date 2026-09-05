@@ -12,8 +12,6 @@ export const loginSchema = z.object({
         .min(6, "Password minimal 6 karakter"),
 });
 
-export type LoginInput = z.infer<typeof loginSchema>;
-
 // 2. Skema Validasi Form Ganti Password Pertama Kali
 export const changePasswordSchema = z
     .object({
@@ -30,8 +28,6 @@ export const changePasswordSchema = z
         path: ["confirmPassword"],
     });
 
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
-
 // 3. Skema Validasi Admin Membuat Akun Siswa Baru
 export const createStudentSchema = z.object({
     name: z.string().min(2, "Nama minimal 2 karakter"),
@@ -40,5 +36,3 @@ export const createStudentSchema = z.object({
     classLevelId: z.string().min(1, "Tingkatan kelas wajib dipilih"),
     password: z.string().min(6, "Password awal minimal 6 karakter"),
 });
-
-export type CreateStudentInput = z.infer<typeof createStudentSchema>;

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Star } from "lucide-react";
-import { submitReviewAction } from "@/lib/actions/review";
+import { submitReviewAction, deleteReviewAction } from "@/lib/actions/review";
 import { useRouter } from "next/navigation";
 
 interface ReviewData {
@@ -21,7 +21,8 @@ interface ReviewData {
 interface CourseReviewSectionProps {
     courseId: string;
     isEnrolled: boolean;
-    studentReview: { rating: number; comment: string | null } | null;
+    // studentReview kini juga menyertakan 'id' agar bisa dipakai untuk delete
+    studentReview: { id: string; rating: number; comment: string | null } | null;
     reviews: ReviewData[];
 }
 
@@ -62,6 +63,23 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
             } else {
                 setIsEditing(false);
                 router.refresh(); // Refresh halaman agar ulasan baru muncul di daftar bawah
+            }
+        });
+    };
+
+    const handleDelete = () => {
+        if (!studentReview?.id) return;
+        if (!confirm("Yakin ingin menghapus ulasanmu? Tindakan ini tidak bisa dibatalkan.")) return;
+
+        startTransition(async () => {
+            const result = await deleteReviewAction(studentReview.id);
+            if (!result.success) {
+                alert(result.error);
+            } else {
+                setRating(0);
+                setComment("");
+                setIsEditing(true); // Kembali ke mode form kosong
+                router.refresh();
             }
         });
     };
@@ -169,12 +187,21 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
                                 ))}
                             </div>
                             {comment && <p className="text-sm text-slate-700">{comment}</p>}
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                            >
-                                Edit Ulasan
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                >
+                                    Edit Ulasan
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    disabled={isPending}
+                                    className="text-sm text-red-500 hover:text-red-600 font-medium disabled:opacity-50"
+                                >
+                                    {isPending ? "Menghapus..." : "Hapus Ulasan"}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -56,3 +56,50 @@ export async function submitReviewAction(formData: FormData) {
         return { success: false, error: "Terjadi kesalahan pada sistem." };
     }
 }
+
+/**
+ * Menghapus ulasan.
+ * - Jika dipanggil oleh siswa: hanya bisa hapus ulasan miliknya sendiri.
+ * - Jika dipanggil oleh admin: bisa hapus ulasan milik siapa pun (moderasi).
+ */
+export async function deleteReviewAction(reviewId: string) {
+    const user = await getAuthenticatedUser();
+
+    if (!user) {
+        return { success: false, error: "Akses ditolak." };
+    }
+
+    try {
+        // Cari review yang dimaksud terlebih dahulu
+        const review = await prisma.review.findUnique({
+            where: { id: reviewId },
+            select: { id: true, courseId: true, student: { select: { userId: true } } }
+        });
+
+        if (!review) {
+            return { success: false, error: "Ulasan tidak ditemukan." };
+        }
+
+        // Validasi hak akses:
+        // - Siswa hanya boleh hapus ulasan miliknya sendiri
+        // - Admin boleh hapus ulasan siapa pun
+        if (user.role === "student") {
+            if (review.student.userId !== user.id) {
+                return { success: false, error: "Kamu hanya bisa menghapus ulasan milikmu sendiri." };
+            }
+        } else if (user.role !== "admin") {
+            return { success: false, error: "Akses ditolak." };
+        }
+
+        await prisma.review.delete({ where: { id: reviewId } });
+
+        // Revalidate halaman yang relevan
+        revalidatePath(`/student/courses/${review.courseId}`);
+        revalidatePath("/admin/reviews");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Gagal menghapus ulasan:", error);
+        return { success: false, error: "Terjadi kesalahan pada sistem." };
+    }
+}
