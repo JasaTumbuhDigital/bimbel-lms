@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function enrollCourseAction(courseId: string) {
     const user = await getAuthenticatedUser();
-    
+
     if (!user || user.role !== "student" || !user.studentProfile) {
         return { success: false, error: "Akses ditolak. Anda harus login sebagai siswa." };
     }
@@ -51,16 +51,24 @@ export async function enrollCourseAction(courseId: string) {
             return { success: true, message: "Kamu sudah terdaftar di kursus ini." };
         }
 
-        await prisma.enrollment.create({
-            data: {
-                studentId,
-                courseId,
-            },
-        });
+        await prisma.$transaction([
+            prisma.enrollment.create({
+                data: {
+                    studentId,
+                    courseId,
+                },
+            }),
+            prisma.wishlist.deleteMany({
+                where: {
+                    studentId,
+                    courseId,
+                },
+            }),
+        ]);
 
         revalidatePath(`/student/courses`);
         revalidatePath(`/student/courses/${courseId}`);
-        
+
         return { success: true, message: "Berhasil mendaftar ke kursus ini!" };
     } catch (error) {
         console.error("Gagal mendaftar kursus:", error);

@@ -1,11 +1,13 @@
 # Technical Spec Document (TSD)
 ## Fitur: Course & Content Module
 
-**Versi:** 1.4
+**Versi:** 1.5
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.3) · Implementation-Plan.md (v2.5, Fase 2) · TSD-Auth-ClassLevel.md (v1.0, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah)
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.3) · Implementation-Plan.md (v2.5, Fase 2) · TSD-Auth-ClassLevel.md (v1.0, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency ringan satu arah)
 **Scope Implementation Plan:** Fase 2 (Modul Kursus & Materi)
 
+> **Ringkasan perubahan v1.5:** `enrollInCourse` (§5.2b) dapat 1 langkah tambahan kecil — bersihkan `wishlists` untuk course yang baru di-enroll (lihat TSD-Student-Dashboard.md D4, Fase 4). Tidak ada perubahan lain.
+>
 > **Ringkasan perubahan v1.4:** Revert perubahan v1.3 — kuis dipindah relasinya dari Lesson ke **Module** (lihat TSD-Quiz.md v3.0), dan sifatnya murni informational (badge status, tidak menggerbang apa pun). Karena itu, `markLessonComplete`/`unmarkLessonComplete` (§7.1) **kembali ke logic aslinya sepenuhnya manual**, tanpa guard atau ketergantungan ke kuis. Modul ini sekarang hanya perlu tahu bahwa Course Builder & halaman detail kursus punya 1 elemen UI tambahan (badge kuis modul) yang datanya sepenuhnya dikelola TSD-Quiz.md — bukan lagi dependency dua arah.
 >
 > **Ringkasan perubahan v1.3 (di-revert):** ~~`markLessonComplete` dapat guard untuk lesson berkuis~~ — tidak jadi dipakai, lihat v1.4 di atas.
@@ -499,7 +501,8 @@ const enrollSchema = z.object({ courseId: z.string().uuid() });
      create: { studentId, courseId },
    });
    ```
-3. Return `{ success: true }` — client re-fetch `getCourseDetailForStudent` setelah ini untuk dapat data full (§5.2)
+3. **(v1.5, ditambahkan untuk TSD-Student-Dashboard.md D4)** Bersihkan wishlist kalau course ini pernah di-wishlist siswa: `prisma.wishlist.deleteMany({ where: { studentId, courseId } })` — aman dipanggil walau tidak ada baris yang cocok. Dilakukan dalam transaksi yang sama dengan poin 2.
+4. Return `{ success: true }` — client re-fetch `getCourseDetailForStudent` setelah ini untuk dapat data full (§5.2)
 
 ### 5.3 `getCourseListForTutor`
 
