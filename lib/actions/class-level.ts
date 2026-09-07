@@ -4,14 +4,13 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { classLevelSchema } from "@/lib/validations/class-level";
-
-import { checkAdminPermission } from "@/lib/data/auth";
+import { getAuthenticatedUser, checkAdminPermission } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
 
 
 
 /**
- * 2. Action Tambah Tingkatan Kelas Baru
+ * 1. Action Tambah Tingkatan Kelas Baru
  */
 export async function createClassLevelAction(
     prevState: ActionResult | null,
@@ -67,7 +66,7 @@ export async function createClassLevelAction(
 }
 
 /**
- * 3. Action Hapus Tingkatan Kelas (Admin Only)
+ * 2. Action Hapus Tingkatan Kelas (Admin Only)
  */
 export async function deleteClassLevelAction(id: string): Promise<ActionResult> {
     const admin = await checkAdminPermission();
@@ -96,5 +95,36 @@ export async function deleteClassLevelAction(id: string): Promise<ActionResult> 
         return { success: true, message: "Tingkatan kelas berhasil dihapus." };
     } catch {
         return { success: false, error: "Gagal menghapus tingkatan kelas dari database." };
+    }
+}
+
+/**
+ * 3. Action Pindahkan Siswa ke Tingkatan Kelas Lain (Admin & Tutor)
+ */
+export async function updateStudentClassLevelAction(
+    studentProfileId: string,
+    newClassLevelId: string
+): Promise<ActionResult> {
+    const user = await getAuthenticatedUser();
+
+    if (!user || (user.role !== "admin" && user.role !== "tutor")) {
+        return { success: false, error: "Akses ditolak. Hanya Admin dan Tutor yang bisa memindahkan kelas siswa." };
+    }
+    try {
+        await prisma.studentProfile.update({
+            where: { id: studentProfileId },
+            data: { classLevelId: newClassLevelId },
+        });
+        revalidatePath("/admin/students");
+        revalidatePath("/admin/class-levels");
+        return {
+            success: true,
+            message: "Tingkatan kelas siswa berhasil diperbarui.",
+        };
+    } catch {
+        return {
+            success: false,
+            error: "Gagal memindahkan tingkatan kelas siswa.",
+        };
     }
 }

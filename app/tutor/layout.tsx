@@ -14,5 +14,10 @@ export default async function TutorLayout({
         redirect("/student");
     }
 
+    // Jika user belum mengganti password default -> paksa ke /change-password
+    if (dbUser.mustChangePassword) {
+        redirect("/change-password");
+    }
+
     return <>{children}</>;
 }

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { logoutAction } from "@/lib/actions/auth";
+import { getAdminDashboardSummary } from "@/lib/data/user";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+    const summary = await getAdminDashboardSummary();
+
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
             <div className="max-w-4xl mx-auto space-y-8">
@@ -23,6 +26,24 @@ export default function AdminDashboardPage() {
                     </form>
                 </header>
 
+                {/* Section Summary */}
+                <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span className="text-sm font-medium text-slate-500 mb-1">Total Siswa Aktif</span>
+                        <span className="text-3xl font-bold text-blue-600">{summary.totalSiswa}</span>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span className="text-sm font-medium text-slate-500 mb-1">Jumlah Kursus</span>
+                        <span className="text-3xl font-bold text-blue-600">{summary.totalKursus}</span>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span className="text-sm font-medium text-slate-500 mb-1">Kelas Berjalan</span>
+                        <span className="text-3xl font-bold text-blue-600">{summary.kelasBerjalan}</span>
+                    </div>
+                </section>
+
                 {/* Grid Menu Navigasi Admin */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Card 1: Manajemen Tingkatan Kelas */}
@@ -40,27 +61,27 @@ export default function AdminDashboardPage() {
 
                     {/* Card 2: Tambah Siswa Baru */}
                     <Link
-                        href="/admin/students/new"
+                        href="/admin/users/new?role=student"
                         className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
                     >
                         <h2 className="text-base font-semibold text-slate-900 mb-1">
-                            Registrasi Siswa Baru &rarr;
+                            Registrasi Pengguna Baru &rarr;
                         </h2>
                         <p className="text-xs text-slate-600">
-                            Daftarkan akun siswa baru, atur kredensial awal, dan tentukan penempatan kelasnya.
+                            Daftarkan akun siswa, tutor, atau admin baru ke dalam sistem.
                         </p>
                     </Link>
 
                     {/* Card 3: Daftar Seluruh Siswa */}
                     <Link
-                        href="/admin/students"
+                        href="/admin/users"
                         className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
                     >
                         <h2 className="text-base font-semibold text-slate-900 mb-1">
-                            Daftar Seluruh Siswa &rarr;
+                            Manajemen Pengguna &rarr;
                         </h2>
                         <p className="text-xs text-slate-600">
-                            Lihat status akun siswa, tingkatan kelas, dan status reset password.
+                            Kelola akun siswa, tutor, dan admin dalam satu tempat.
                         </p>
                     </Link>
 

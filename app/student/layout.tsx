@@ -9,8 +9,8 @@ export default async function StudentLayout({
     const dbUser = await getAuthenticatedUser();
     if (!dbUser) redirect("/login");
 
-    // Jika siswa belum mengganti password default -> paksa ke /change-password
-    if (dbUser.role === "student" && dbUser.studentProfile?.mustChangePassword) {
+    // Jika user belum mengganti password default -> paksa ke /change-password
+    if (dbUser.mustChangePassword) {
         redirect("/change-password");
     }
 

@@ -14,5 +14,10 @@ export default async function AdminLayout({
         else redirect("/student");
     }
 
+    // Jika user belum mengganti password default -> paksa ke /change-password
+    if (dbUser.mustChangePassword) {
+        redirect("/change-password");
+    }
+
     return <>{children}</>;
 }
