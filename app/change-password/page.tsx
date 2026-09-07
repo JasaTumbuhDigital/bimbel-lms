@@ -22,7 +22,7 @@ export default function ChangePasswordPage() {
             if (!res.success) {
                 setErrorMsg(res.error || "Gagal memperbarui password.");
             } else {
-                setSuccessMsg("Password berhasil diperbarui. Mengalihkan ke portal siswa...");
+                setSuccessMsg("Password berhasil diperbarui. Mengalihkan ke portal user...");
                 setTimeout(() => {
                     router.push(res.data?.redirectTo || "/student");
                     router.refresh();

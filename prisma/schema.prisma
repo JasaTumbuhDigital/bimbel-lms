@@ -13,15 +13,16 @@ enum UserRole {
 }
 
 model User {
-    id        String   @id @default(uuid())
-    authId    String   @unique @map("auth_id")
-    name      String
-    email     String   @unique
-    phone     String?
-    role      UserRole
-    avatarUrl String?  @map("avatar_url")
-    isActive  Boolean  @default(true) @map("is_active")
-    createdAt DateTime @default(now()) @map("created_at")
+    id                 String   @id @default(uuid())
+    authId             String   @unique @map("auth_id")
+    name               String
+    email              String   @unique
+    phone              String?
+    role               UserRole
+    avatarUrl          String?  @map("avatar_url")
+    isActive           Boolean  @default(true) @map("is_active")
+    mustChangePassword Boolean  @default(true) @map("must_change_password")
+    createdAt          DateTime @default(now()) @map("created_at")
 
     studentProfile StudentProfile?
     tutorProfile   TutorProfile?
@@ -32,11 +33,10 @@ model User {
 }
 
 model StudentProfile {
-    id                 String   @id @default(uuid())
-    userId             String   @unique @map("user_id")
-    classLevelId       String   @map("class_level_id")
-    mustChangePassword Boolean  @default(true) @map("must_change_password")
-    createdAt          DateTime @default(now()) @map("created_at")
+    id           String   @id @default(uuid())
+    userId       String   @unique @map("user_id")
+    classLevelId String   @map("class_level_id")
+    createdAt    DateTime @default(now()) @map("created_at")
 
     user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
     classLevel       ClassLevel       @relation(fields: [classLevelId], references: [id], onDelete: Restrict)

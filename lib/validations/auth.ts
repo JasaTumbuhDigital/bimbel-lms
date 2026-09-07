@@ -27,12 +27,3 @@ export const changePasswordSchema = z
         message: "Konfirmasi password tidak cocok dengan password baru",
         path: ["confirmPassword"],
     });
-
-// 3. Skema Validasi Admin Membuat Akun Siswa Baru
-export const createStudentSchema = z.object({
-    name: z.string().min(2, "Nama minimal 2 karakter"),
-    email: z.string().email("Format email tidak valid"),
-    phone: z.string().optional(),
-    classLevelId: z.string().min(1, "Tingkatan kelas wajib dipilih"),
-    password: z.string().min(6, "Password awal minimal 6 karakter"),
-});
