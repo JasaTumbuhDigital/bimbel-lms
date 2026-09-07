@@ -45,40 +45,6 @@ export async function getTutorsForSelect() {
 }
 
 /**
- * Fetch ringkasan data untuk Dashboard Admin
- */
-export async function getAdminDashboardSummary() {
-    const admin = await checkAdminPermission();
-    if (!admin) return { totalSiswa: 0, totalKursus: 0, kelasBerjalan: 0 };
-
-    try {
-        const [totalSiswa, totalKursus, kelasBerjalan] = await Promise.all([
-            // 1. Total siswa aktif
-            prisma.user.count({
-                where: { role: "student", isActive: true }
-            }),
-            // 2. Total kursus yang terdaftar
-            prisma.course.count({
-                where: { isPublished: true, isArchived: false }
-            }),
-            // 3. Jumlah tingkatan kelas yang memiliki minimal 1 siswa aktif (Kelas Berjalan)
-            prisma.classLevel.count({
-                where: {
-                    studentProfiles: {
-                        some: { user: { isActive: true } }
-                    }
-                },
-            }),
-        ]);
-
-        return { totalSiswa, totalKursus, kelasBerjalan };
-    } catch (error) {
-        console.error("Gagal mengambil summary dashboard:", error);
-        return { totalSiswa: 0, totalKursus: 0, kelasBerjalan: 0 };
-    }
-}
-
-/**
  * Fetch daftar user berdasarkan role, dengan search & filter (Admin Only)
  */
 export async function listUsers(params: {
