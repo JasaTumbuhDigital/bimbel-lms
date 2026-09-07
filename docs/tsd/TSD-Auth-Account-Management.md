@@ -155,8 +155,8 @@ export const changePasswordSchema = z
   });
 
 export const updateProfileSchema = z.object({
-  name: z.string().min(2).max(100),
-  phone: z.string().min(9).max(15).optional(),
+  name: z.string().min(2).max(100).optional(),
+  phone: z.string().regex(/^08\d{8,11}$/).optional(),
   avatarUrl: z.string().url().optional(),
 });
 

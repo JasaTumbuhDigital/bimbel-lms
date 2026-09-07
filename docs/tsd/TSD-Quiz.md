@@ -3,7 +3,7 @@
 
 **Versi:** 3.0
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4, direvisi bersamaan) · SDD.md (v1.3, direvisi bersamaan) · Implementation-Plan.md (v2.5, direvisi bersamaan, Fase 3) · TSD-Course-Content.md (v1.4, direvisi bersamaan — dependency ringan satu arah) · TSD-Auth-ClassLevel.md (v1.0, dependency tidak langsung)
+**Terkait dokumen:** PRD.md (v2.4, direvisi bersamaan) · SDD.md (v1.4, direvisi bersamaan) · Implementation-Plan.md (v2.6, direvisi bersamaan, Fase 3) · TSD-Course-Content.md (v1.5, direvisi bersamaan — dependency ringan satu arah) · TSD-Auth-ClassLevel.md (v1.1, dependency tidak langsung)
 **Scope Implementation Plan:** Fase 3 (Kuis)
 
 > **Ringkasan perubahan v3.0 (relasi dipindah dari Lesson ke Module):** Di v2.0, kuis melekat ke satu `Lesson` (1:1) dan kelulusannya otomatis menandai lesson itu selesai. Setelah didiskusikan ulang, ini diganti: kuis sekarang melekat ke **Module** (1:1) — sejajar/sibling dengan Lesson di bawah modul yang sama, sesuai bahasa asli FR-7 ("modul → sub-materi: video/dokumen/kuis"). Kelulusan kuis sekarang **murni informasional** (badge status) — **tidak** menggerbang penandaan lesson mana pun, tidak butuh lagi helper bersama dengan `lesson_progress`. Ini melepas dependency dua arah ke TSD-Course-Content yang ada di v2.0 — sekarang dependency-nya cuma satu arah dan ringan (TSD-Quiz.md butuh Module/Course/Enrollment dari TSD-Course-Content, tapi tidak sebaliknya).
@@ -30,7 +30,7 @@ Modul ini bergantung **satu arah, ringan** pada TSD-Course-Content.md — hanya 
 - Model `Enrollment` — syarat siswa boleh mengerjakan kuis: harus sudah enroll di course pemilik modul tersebut
 - Pola `canManageCourse` (resolve module → course → cek `course_tutors`) dipakai ulang untuk permission builder kuis
 
-**Tidak** ada dependency balik — TSD-Course-Content.md tidak perlu tahu apa pun tentang internal kuis selain menyediakan 1 slot UI per modul (§8.2, §8.4 di dokumen tersebut, sudah direvisi ke v1.4).
+**Tidak** ada dependency balik — TSD-Course-Content.md tidak perlu tahu apa pun tentang internal kuis selain menyediakan 1 slot UI per modul (§8.2, §8.4 di dokumen tersebut, sudah direvisi ke v1.5).
 
 ### 1.4 Keputusan Desain
 
@@ -391,7 +391,7 @@ List ringkas "kuis modul yang pernah dikerjakan" (judul, lulus/belum, skor terba
 
 | Dependency | Kebutuhan Spesifik di Modul Ini |
 |---|---|
-| TSD-Course-Content.md (v1.4) | Model `Module`, `Course`, `Enrollment`; pola `canManageCourse`. **Satu arah** — tidak ada lagi ketergantungan balik seperti di v2.0 |
+| TSD-Course-Content.md (v1.5) | Model `Module`, `Course`, `Enrollment`; pola `canManageCourse`. **Satu arah** — tidak ada lagi ketergantungan balik seperti di v2.0 |
 | `prisma` | Upsert `quiz_progress` sederhana (§5.2), tidak perlu transaksi lintas-tabel |
 | Supabase RLS | Lihat §3 |
 
@@ -414,4 +414,4 @@ List ringkas "kuis modul yang pernah dikerjakan" (judul, lulus/belum, skor terba
 
 ---
 
-*TSD ini menggantikan v2.0 sepenuhnya (relasi Lesson→Module, gating dihapus). TSD-Course-Content.md direvisi bersamaan ke v1.4 untuk melepas coupling yang sempat ditambahkan di v1.3.*
+*TSD ini menggantikan v2.0 sepenuhnya (relasi Lesson→Module, gating dihapus). TSD-Course-Content.md direvisi bersamaan ke v1.5 untuk melepas coupling yang sempat ditambahkan di v1.3.*

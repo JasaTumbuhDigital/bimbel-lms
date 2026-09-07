@@ -158,10 +158,10 @@ USING (
   OR EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
 );
 
--- UPDATE (termasuk pindah class_level_id): hanya admin
+-- UPDATE (termasuk pindah class_level_id): admin dan tutor
 CREATE POLICY student_profiles_update ON student_profiles FOR UPDATE
 USING (
-  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
+  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('admin', 'tutor'))
   OR user_id = (SELECT id FROM users WHERE auth_id = auth.uid()) -- siswa hanya untuk kasus tertentu, lihat catatan di bawah
 );
 ```
@@ -232,7 +232,7 @@ const createClassLevelSchema = z.object({
 2. Jika > 0 → return error `CLASS_LEVEL_HAS_ACTIVE_STUDENTS` dengan jumlah siswa terdampak (untuk ditampilkan di UI: "Tidak bisa menonaktifkan, masih ada 12 siswa di tingkatan ini")
 3. Jika 0 → set `isActive = false` (soft-delete, bukan hard delete row — sesuai SDD §3.3)
 
-### 5.3 `assignStudentToClassLevel`
+### 5.3 `updateStudentClassLevelAction`
 
 **FR terkait:** FR-37
 
@@ -280,7 +280,7 @@ export function getAccessibleCourseFilter(studentClassLevelId: string) {
 
 ### 6.2 Halaman `/admin/users/students` (list & pindah tingkatan)
 - Table siswa dengan kolom tingkatan saat ini
-- Dropdown inline per row untuk pindah tingkatan (memanggil `assignStudentToClassLevel`) — tidak perlu halaman terpisah, cukup interaksi inline sesuai PRD §5.1a ("UI seminimal mungkin")
+- Dropdown inline per row untuk pindah tingkatan (memanggil `updateStudentClassLevelAction`) — tidak perlu halaman terpisah, cukup interaksi inline sesuai PRD §5.1a ("UI seminimal mungkin")
 
 > **Catatan (v1.1):** Halaman UI untuk otentikasi seperti `/login`, `/change-password-required`, form pembuatan akun `/admin/users/new`, dan pengaturan profil kini sepenuhnya terpusat di **TSD-Auth-Account-Management.md v1.1**.
 

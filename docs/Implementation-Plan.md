@@ -12,7 +12,7 @@
 >
 > **Ringkasan perubahan v2.4:** Fase 3 (Kuis) dirombak — jadi post-test per lesson dengan passing grade (bukan modul ujian berdiri sendiri dengan riwayat percobaan), kelulusan otomatis menandai lesson selesai. Draft desain awal yang ternyata lebih cocok untuk "ujian standalone" dipindah jadi kandidat backlog baru di Fase 11.
 >
-> **Ringkasan perubahan v2.3:** FR-10 (lesson tipe dokumen PDF/PPT + preview) dikonfirmasi **tetap di Fase 2/Tier 1** (Google Docs Viewer sebagai skema awal) — sempat dipertimbangkan pindah ke Tier 2 tapi dibatalkan. Library rendering khusus dicatat sebagai opsi upgrade opsional di Fase 11, bukan fitur terpisah.
+> **Ringkasan perubahan v2.3:** FR-10 (lesson tipe dokumen PDF/PPT + preview) dikonfirmasi **tetap di Fase 2/Tier 1** dengan menggunakan `@cyntler/react-doc-viewer` sebagai skema awal rendering langsung di browser.
 >
 > **Ringkasan perubahan v2.2:** Fase 1 & Fase 2 disesuaikan mengikuti SDD v1.1 — relasi kelas↔kursus jadi many-to-many + flag eksplisit, kepemilikan kursus oleh tutor jadi many-to-many (co-teaching), plus scoping akses tutor terbatas ke kursus miliknya (FR-40, FR-41 baru di PRD).
 >
@@ -118,7 +118,7 @@
 - [ ] Tombol "Enroll" eksplisit di halaman detail kursus (bukan auto-enroll diam-diam) — buka akses penuh ke konten setelah diklik
 - [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`), dengan pembedaan hak akses Tutor Utama (`createdBy`) vs Co-Tutor, serta halaman "Eksplorasi Kursus" Read-Only untuk preview seluruh kursus — FR-41
 - [ ] Video: embed YouTube unlisted (player biasa, **tanpa** tracking otomatis di T1)
-- [ ] Dokumen: upload PDF/PPT ke Supabase Storage + preview di browser (PDF native, PPT/PPTX via Google Docs Viewer)
+- [ ] Dokumen: upload PDF/PPT ke Supabase Storage + preview di browser via `@cyntler/react-doc-viewer`
 - [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`, hanya untuk siswa yang sudah enroll)
 
 **Output:** Siswa jelajahi & enroll kursus secara sadar, belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor hanya lihat kursus miliknya.
@@ -222,7 +222,7 @@ Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, d
 - **Paginasi Ulasan (FR-16):** Implementasi "Load More" aktif — fetch 10 ulasan pertama, muat 10 lagi per klik tombol; menggunakan cursor-based pagination di Prisma (`take`/`skip` atau `cursor`). Ini adalah kelanjutan langsung dari keputusan desain di Fase 4.
 - **Infinite Scroll Katalog Kursus:** Implementasi infinite scroll di `/student/courses` jika jumlah kursus aktif sudah mendekati 30+; dikombinasikan dengan fitur Pencarian dan Filter Kelas.
 - **Modul Ujian/Exam standalone (FR-11b, kandidat baru)** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, kemungkinan benar-benar menggerbang kelulusan kursus untuk kebutuhan sertifikasi. Draft teknis awal sudah ada: **TSD-Exam-Standalone-DRAFT.md** (perlu direvisit total sebelum dipakai — ditulis dengan asumsi lama sebelum Fase 3 dirombak jadi post-test ringan). Belum diprioritaskan vs fitur Fase 11 lain, evaluasi bareng saat fase ini mulai dikerjakan.
-- *(Opsional, jika ada permintaan klien)* Upgrade preview dokumen dari Google Docs Viewer ke library khusus — `@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, atau `pptx-glimpse` — evaluasi saat kebutuhan itu muncul, bukan default
+- *(Opsional)* Kustomisasi preview dokumen jika ada permintaan klien lebih lanjut terkait `@cyntler/react-doc-viewer`
 
 **Terkait FR:** FR-13, FR-27, FR-28, FR-11b
 

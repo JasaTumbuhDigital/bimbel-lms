@@ -3,7 +3,7 @@
 
 **Versi:** 1.0
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.3) · Implementation-Plan.md (v2.5, Fase 4) · TSD-Course-Content.md (v1.5, dependency) · TSD-Auth-ClassLevel.md (v1.0, dependency tidak langsung)
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6, Fase 4) · TSD-Course-Content.md (v1.5, dependency) · TSD-Auth-ClassLevel.md (v1.1, dependency tidak langsung)
 **Scope Implementation Plan:** Fase 4 (Dashboard Siswa Lengkap — Wishlist & Reviews)
 
 ---
@@ -291,8 +291,8 @@ const aggregate = await prisma.review.aggregate({
 
 | Dependency | Kebutuhan Spesifik di Modul Ini |
 |---|---|
-| TSD-Course-Content.md (v1.4) | Model `Enrollment`, `Lesson`, `LessonProgress`, `Course`; **penambahan kecil** di `enrollInCourse` (§7.2 dokumen tsb) untuk membersihkan wishlist (D4) |
-| TSD-Auth-ClassLevel.md (v1.0) | Tidak dipakai langsung di query modul ini — disebut hanya sebagai konteks edge case #6 |
+| TSD-Course-Content.md (v1.5) | Model `Enrollment`, `Lesson`, `LessonProgress`, `Course`; **penambahan kecil** di `enrollInCourse` (§7.2 dokumen tsb) untuk membersihkan wishlist (D4) |
+| TSD-Auth-ClassLevel.md (v1.1) | Tidak dipakai langsung di query modul ini — disebut hanya sebagai konteks edge case #6 |
 | `prisma` | Aggregate (`_avg`, `_count`) untuk rating; upsert untuk wishlist/review |
 | Supabase RLS | Lihat §3 |
 

@@ -3,7 +3,7 @@
 
 **Versi:** 1.5
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.3) · Implementation-Plan.md (v2.5, Fase 2) · TSD-Auth-ClassLevel.md (v1.0, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency ringan satu arah)
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6, Fase 2) · TSD-Auth-ClassLevel.md (v1.1, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency ringan satu arah)
 **Scope Implementation Plan:** Fase 2 (Modul Kursus & Materi)
 
 > **Ringkasan perubahan v1.5:** `enrollInCourse` (§5.2b) dapat 1 langkah tambahan kecil — bersihkan `wishlists` untuk course yang baru di-enroll (lihat TSD-Student-Dashboard.md D4, Fase 4). Tidak ada perubahan lain.
@@ -12,7 +12,7 @@
 >
 > **Ringkasan perubahan v1.3 (di-revert):** ~~`markLessonComplete` dapat guard untuk lesson berkuis~~ — tidak jadi dipakai, lihat v1.4 di atas.
 >
-> **Ringkasan perubahan v1.2:** FR-10 (lesson tipe dokumen PDF/PPT + preview) **dikembalikan ke Tier 1** — dibangun dengan skema awal (Google Docs Viewer untuk preview PPT/PPTX, native iframe untuk PDF). Library khusus (`@cyntler/react-doc-viewer`, dst) dicatat sebagai opsi upgrade **jika ada permintaan klien** (custom quote/Tier 2), bukan solusi default. Lihat §6.
+> **Ringkasan perubahan v1.2:** FR-10 (lesson tipe dokumen PDF/PPT + preview) **dikembalikan ke Tier 1** — dibangun dengan library `@cyntler/react-doc-viewer` untuk render semua jenis dokumen langsung di browser tanpa pengiriman data ke pihak ketiga. Lihat §6.
 >
 > **Ringkasan perubahan v1.1:** Enrollment tidak lagi otomatis diam-diam saat siswa buka detail kursus — sekarang lewat **tombol "Enroll" eksplisit**, konten lesson terkunci (preview judul saja) sampai siswa enroll.
 
@@ -46,7 +46,7 @@ Modul ini **bergantung penuh** pada TSD-Auth-ClassLevel.md — khususnya helper 
 
 **A3 — Soft-delete untuk kursus:** `deleteCourse` tidak menghapus row secara permanen (mencegah orphan data di `enrollments`, `lesson_progress`, dst), melainkan set `isArchived = true`. Kursus arsip disembunyikan dari semua listing kecuali tampilan khusus admin.
 
-**A4 — Preview dokumen pakai Google Docs Viewer di Tier 1, library khusus jadi opsi upgrade:** FR-10 (upload dokumen PDF/PPT + preview di browser) **tetap dibangun di Tier 1**, dengan pendekatan paling murah secara effort: PDF pakai native `<iframe>` browser, PPT/PPTX pakai embed **Google Docs Viewer** (§6.4). Library rendering khusus (`@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, `pptx-glimpse`) **tidak dipakai di skema awal** — dicatat sebagai opsi upgrade kalau ada permintaan klien spesifik (misal keberatan file dikirim ke Google untuk preview), bukan dibangun sekarang secara spekulatif.
+**A4 — Preview dokumen pakai `@cyntler/react-doc-viewer` di Tier 1:** FR-10 (upload dokumen PDF/PPT + preview di browser) **tetap dibangun di Tier 1**, dengan pendekatan menggunakan library `@cyntler/react-doc-viewer` (§6.4). Ini memungkinkan render secara native di komponen React tanpa mengirim file ke pihak ketiga seperti Google.
 
 ---
 
@@ -271,7 +271,7 @@ USING (
   OR EXISTS (SELECT 1 FROM student_profiles sp JOIN users u ON u.id = sp.user_id WHERE sp.id = enrollments.student_id AND u.auth_id = auth.uid())
 );
 
--- INSERT: sistem (via Server Action lazy-enroll) atas nama siswa yang login, atau admin
+-- INSERT: sistem atas nama siswa yang login melalui tombol Enroll, atau admin
 CREATE POLICY enrollments_insert ON enrollments FOR INSERT
 WITH CHECK (
   EXISTS (SELECT 1 FROM student_profiles sp JOIN users u ON u.id = sp.user_id WHERE sp.id = enrollments.student_id AND u.auth_id = auth.uid())
@@ -628,12 +628,9 @@ Untuk mencegah penumpukan "file yatim" di Storage, *backend* mengimplementasikan
 **FR terkait:** FR-10
 
 **Keputusan teknis (skema awal Tier 1):**
-- **PDF** → native `<iframe src={signedUrl}>` — browser modern merender PDF langsung tanpa library tambahan
-- **PPT/PPTX** → **tidak ada rendering native browser**. Solusi: embed via **Google Docs Viewer** (`https://docs.google.com/gview?url={signedUrl}&embedded=true`), yang menerima URL publik/signed dan merender pratinjau tanpa perlu convert file di server sendiri
+- Menggunakan library **`@cyntler/react-doc-viewer`** yang mendukung multi format (PDF, DOCX, PPTX).
 
-**Trade-off yang diterima:** Google Docs Viewer mengirim URL file (walau signed & sementara) ke pihak ketiga (Google) untuk generate preview — ini diterima sebagai kompromi wajar untuk Tier 1 (menghindari kompleksitas convert PPTX→PDF sendiri di server, yang butuh library berat/headless office, atau integrasi library rendering khusus yang belum tentu dibutuhkan semua klien).
-
-**Jalur upgrade (jika klien minta, bukan default):** Kalau suatu klien keberatan file-nya dikirim ke Google (concern privasi/kerahasiaan materi), atau butuh kualitas preview PPTX yang lebih baik, evaluasi salah satu dari `@cyntler/react-doc-viewer`, `pptx-viewer`, `pptx-renderer`, atau `pptx-glimpse` sebagai pengganti — pilih berdasarkan kualitas rendering & kemudahan integrasi Next.js **saat kebutuhan itu muncul**, karena ekosistem library ini cukup cepat berubah dan belum tentu opsi terbaik hari ini masih relevan nanti. Ini scope custom quote per klien, bukan bagian template standar.
+**Keuntungan teknis:** Ini menghindari perlunya mengirim URL file ke pihak ketiga (seperti Google Docs Viewer) demi render preview, sehingga materi lebih aman dan dapat di-render langsung di React DOM.
 
 **Alur pengambilan signed URL (dipanggil dari Server Component saat render halaman lesson):**
 ```ts
@@ -726,7 +723,7 @@ const markLessonSchema = z.object({
 | Dependency | Kebutuhan Spesifik di Modul Ini |
 |---|---|
 | Supabase Storage | Bucket `documents`, signed URL generation (§6.3, §6.4) |
-| Google Docs Viewer (eksternal, tanpa API key) | Preview PPT/PPTX (§6.4) — trade-off privasi dicatat eksplisit, ada jalur upgrade ke library khusus jika diminta klien |
+| `@cyntler/react-doc-viewer` | Rendering dokumen PDF/PPT/Word secara native di komponen React (§6.4) |
 | YouTube (embed iframe biasa) | Video materi, tanpa API key di Tier 1 |
 | `prisma` | Transaksi batch untuk `reorderModules`/`reorderLessons`, upsert untuk `enrollments`/`lesson_progress` |
 | TSD-Auth-ClassLevel.md | `getAccessibleCourseFilter` helper, model `User`/`StudentProfile`/`ClassLevel` |
@@ -744,7 +741,7 @@ const markLessonSchema = z.object({
 - [ ] Siswa bisa lihat preview kursus (struktur modul/lesson terkunci) sebelum enroll, dan konten (video) baru terbuka setelah klik "Enroll"
 - [ ] Response `getCourseDetailForStudent` untuk siswa yang belum enroll **tidak mengandung** `videoUrl`/`documentUrl` sama sekali (dicek lewat Network tab, bukan cuma UI)
 - [ ] Siswa pindah tingkatan tidak kehilangan akses/progress ke kursus yang sudah di-enroll
-- [ ] Video YouTube ter-embed & bisa diputar; dokumen PDF & PPT/PPTX bisa dipreview tanpa download (via Google Docs Viewer untuk PPT/PPTX)
+- [ ] Video YouTube ter-embed & bisa diputar; dokumen PDF & PPT/PPTX bisa dipreview tanpa download (via `@cyntler/react-doc-viewer`)
 - [ ] Upload dokumen menolak tipe file di luar PDF/PPT/PPTX, dan file di atas batas ukuran, baik divalidasi di client maupun server
 - [ ] Tombol Tandai Selesai/Batalkan hanya bisa dipakai siswa yang sudah enroll, berfungsi dua arah, tersimpan langsung tanpa perlu refresh
 - [ ] Semua RLS policy §3 diuji manual per role, termasuk mencoba akses lintas-scope yang seharusnya ditolak

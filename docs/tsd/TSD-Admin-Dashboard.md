@@ -3,7 +3,7 @@
 
 **Versi:** 1.1
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6, Fase 5) · TSD-Auth-Account-Management.md (v1.1, dependency erat — `createUserAccount` kanonik di sana) · TSD-Auth-ClassLevel.md (v1.0, dependency) · TSD-Course-Content.md (v1.5, dependency ringan)
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6, Fase 5) · TSD-Auth-Account-Management.md (v1.1, dependency erat — `createUserAccount` kanonik di sana) · TSD-Auth-ClassLevel.md (v1.1, dependency) · TSD-Course-Content.md (v1.5, dependency ringan)
 **Scope Implementation Plan:** Fase 5 (Dashboard Admin & Manajemen Akun Manual)
 
 > **Ringkasan perubahan v1.1:** Setelah didiskusikan ulang, `createUserAccount` (generalisasi dari `createStudentAccount`) **dipindah jadi kanonik di TSD-Auth-Account-Management.md v1.1** — dokumen ini cukup memanggilnya, tidak lagi mendefinisikan ulang (§4.1 lama dihapus, digantikan referensi). `mustChangePassword` juga dipindah ke tabel `users` (berlaku semua role) — E2 di bawah direvisi total, dan `resetUserPassword` (§4.5) jadi seragam untuk semua role, tidak ada lagi percabangan siswa vs tutor.
@@ -36,7 +36,7 @@ Spesifikasi siap-coding untuk dashboard ringkas admin (angka operasional) dan mo
 Dependency lain:
 - Model `User` (termasuk `mustChangePassword`, sekarang di sini — lihat E2 revisi), `StudentProfile`, `TutorProfile`, `AdminProfile` dari TSD-Auth-Account-Management.md v1.1
 - **`createUserAccount`** (TSD-Auth-Account-Management.md v1.1 §4.2) — **dipanggil langsung**, tidak lagi didefinisikan ulang di sini (beda dari v1.0 dokumen ini)
-- `changeStudentClassLevel` (TSD-Auth-ClassLevel.md, FR-37) — dipakai ulang untuk ubah tingkatan siswa dari halaman edit user
+- `updateStudentClassLevelAction` (TSD-Auth-ClassLevel.md, FR-37) — dipakai ulang untuk ubah tingkatan siswa dari halaman edit user
 - `course_tutors` (TSD-Course-Content.md) — dipakai read-only untuk menampilkan "jumlah kursus diampu" di listing tutor (§4.2), tidak untuk assign/unassign (itu tetap di TSD-Course-Content §FR-40)
 
 ### 1.4 Keputusan Desain
@@ -100,7 +100,7 @@ const updateUserAccountSchema = z.object({
 1. Cek `role === 'admin'` pemanggil
 2. Kalau `email` diubah: cek belum dipakai user lain (`EMAIL_ALREADY_EXISTS`, sama seperti `createUserAccount`), lalu update **dua tempat** dalam urutan yang aman — `supabase.auth.admin.updateUserById(authId, { email })` dulu, baru `prisma.user.update` (kebalikan urutan dari create, karena di sini yang "sumber kebenaran awal" adalah baris `users` yang sudah ada; kalau step Supabase gagal, jangan lanjut update Prisma)
 3. Update field lain (`name`, `phone`) di `users`; `bio` di `tutor_profiles` kalau target adalah tutor
-4. **Perubahan `classLevelId` siswa TIDAK lewat sini** — arahkan ke `changeStudentClassLevel` (TSD-Auth-ClassLevel.md) yang sudah ada, supaya logic soal riwayat/log perpindahan tingkatan (kalau ada) tidak terduplikasi di dua tempat
+4. **Perubahan `classLevelId` siswa TIDAK lewat sini** — arahkan ke `updateStudentClassLevelAction` (TSD-Auth-ClassLevel.md) yang sudah ada, supaya logic soal riwayat/log perpindahan tingkatan (kalau ada) tidak terduplikasi di dua tempat
 
 ### 4.3 `listUsers` (query)
 
@@ -187,7 +187,7 @@ const [totalSiswa, totalKursus, kelasBerjalan] = await Promise.all([
 - Search box (nama/email) + filter tingkatan (khusus tab Siswa)
 - Tiap baris: nama, email, status (Aktif/Nonaktif badge), untuk tutor tambahan kolom "jumlah kursus diampu"; tombol aksi: Edit, Reset Password, Nonaktifkan/Aktifkan
 - 3 tombol tambah, satu per tab aktif: **"+ Tambah Siswa"**, **"+ Tambah Tutor"**, **"+ Tambah Admin"** — semua memanggil `createUserAccount` dari TSD-Auth-Account-Management dengan `role` berbeda (§4.1), bukan 1 form dengan dropdown role (field yang dibutuhkan beda: tingkatan vs bio vs tanpa field tambahan)
-- Modal/halaman Edit: form `updateUserAccount`; untuk siswa ada tombol terpisah "Ubah Tingkatan" yang memanggil `changeStudentClassLevel` (bukan bagian form yang sama, supaya jelas ini aksi berbeda dengan histori/efek sendiri kalau ada)
+- Modal/halaman Edit: form `updateUserAccount`; untuk siswa ada tombol terpisah "Ubah Tingkatan" yang memanggil `updateStudentClassLevelAction` (bukan bagian form yang sama, supaya jelas ini aksi berbeda dengan histori/efek sendiri kalau ada)
 - Tombol "Reset Password" menampilkan modal konfirmasi, lalu tampilkan `tempPassword` baru sekali (mirip alur `createUserAccount`) — pesan eksplisit "password ini tidak akan ditampilkan lagi, catat/kirim sekarang"
 - Tombol "Nonaktifkan" untuk akun sendiri **disembunyikan** di UI (selain guard di server, E4) — mencegah kebingungan kenapa tombolnya ada tapi selalu gagal
 
@@ -212,7 +212,7 @@ const [totalSiswa, totalKursus, kelasBerjalan] = await Promise.all([
 | Dependency | Kebutuhan Spesifik di Modul Ini |
 |---|---|
 | TSD-Auth-Account-Management.md (v1.1) | `createUserAccount` (§4.2, dipanggil langsung — **tidak didefinisikan ulang di sini**, lihat E1); model `User` (termasuk `mustChangePassword`), `StudentProfile`/`TutorProfile`/`AdminProfile`; `loginUser` (guard `is_active` & `mustChangePassword`, tidak perlu diubah) |
-| TSD-Auth-ClassLevel.md (v1.0) | `changeStudentClassLevel` dipakai ulang dari UI edit user (§5.2), tidak diduplikasi |
+| TSD-Auth-ClassLevel.md (v1.1) | `updateStudentClassLevelAction` dipakai ulang dari UI edit user (§5.2), tidak diduplikasi |
 | TSD-Course-Content.md (v1.5) | `course_tutors` dibaca read-only untuk kolom "jumlah kursus diampu" di listing tutor |
 | Supabase Auth Admin API | `updateUserById` (ubah email/password), dipakai di §4.2 & §4.6 |
 
@@ -227,7 +227,7 @@ const [totalSiswa, totalKursus, kelasBerjalan] = await Promise.all([
 - [ ] Siswa/tutor/admin yang dinonaktifkan tidak bisa login (`ACCOUNT_INACTIVE`), tapi data historis (enrollment/course_tutors/dst) tetap utuh di database
 - [ ] Reset password admin menghasilkan password baru yang valid untuk login; **user mana pun** (siswa/tutor/admin) dipaksa ganti password lagi di login berikutnya (E2 direvisi — tidak ada lagi pengecualian role)
 - [ ] Dashboard admin menampilkan 3 angka yang sesuai definisi §4.5 (total siswa aktif, total kursus, kelas berjalan)
-- [ ] Mengubah tingkatan siswa dari halaman ini benar-benar memanggil `changeStudentClassLevel` existing, bukan logic duplikat
+- [ ] Mengubah tingkatan siswa dari halaman ini benar-benar memanggil `updateStudentClassLevelAction` existing, bukan logic duplikat
 
 ---
 

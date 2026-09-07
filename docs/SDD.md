@@ -615,4 +615,4 @@ Sudah dibahas detail alasannya di PRD §5.1a dan Implementation Plan §2 — dic
 
 ---
 
-*Dokumen ini adalah turunan teknis dari PRD.md v2.0. Perubahan pada PRD (terutama scope Tier 1/Tier 2 atau FR terkait) harus tercermin di revisi SDD ini. TSD (Technical Spec Document) per fitur akan disusun terpisah, merujuk ke component breakdown (§5) dan data model (§3) di dokumen ini.*
+*Dokumen ini adalah turunan teknis dari PRD.md v2.4. Perubahan pada PRD (terutama scope Tier 1/Tier 2 atau FR terkait) harus tercermin di revisi SDD ini. TSD (Technical Spec Document) per fitur akan disusun terpisah, merujuk ke component breakdown (§5) dan data model (§3) di dokumen ini.*
