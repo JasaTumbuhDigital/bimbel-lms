@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { logoutAction } from "@/lib/actions/auth";
-import { getAdminDashboardSummary } from "@/lib/data/user";
+import { getAdminDashboardSummary } from "@/lib/data/admin-dashboard";
 
 export default async function AdminDashboardPage() {
     const summary = await getAdminDashboardSummary();
@@ -27,22 +27,28 @@ export default async function AdminDashboardPage() {
                 </header>
 
                 {/* Section Summary */}
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                         <span className="text-sm font-medium text-slate-500 mb-1">Total Siswa Aktif</span>
                         <span className="text-3xl font-bold text-blue-600">{summary.totalSiswa}</span>
                     </div>
-                    
+
+                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                        <span className="text-sm font-medium text-slate-500 mb-1">Total Tutor Aktif</span>
+                        <span className="text-3xl font-bold text-blue-600">{summary.totalTutor}</span>
+                    </div>
+
                     <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                         <span className="text-sm font-medium text-slate-500 mb-1">Jumlah Kursus</span>
                         <span className="text-3xl font-bold text-blue-600">{summary.totalKursus}</span>
                     </div>
-                    
+
                     <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
                         <span className="text-sm font-medium text-slate-500 mb-1">Kelas Berjalan</span>
                         <span className="text-3xl font-bold text-blue-600">{summary.kelasBerjalan}</span>
                     </div>
                 </section>
+
 
                 {/* Grid Menu Navigasi Admin */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
