@@ -20,13 +20,15 @@ export default function LoginPage() {
             const res = await loginAction(null, formData);
             if (!res.success) {
                 setErrorMsg(res.error || "Gagal melakukan login.");
+                setIsPending(false);
             } else if (res.data?.redirectTo) {
                 router.push(res.data.redirectTo);
                 router.refresh();
+                // Sengaja tidak set isPending(false) agar tombol tetap loading
+                // selama Next.js memuat halaman dashboard
             }
         } catch (err) {
             setErrorMsg("Terjadi kesalahan sistem saat mencoba login.");
-        } finally {
             setIsPending(false);
         }
     };

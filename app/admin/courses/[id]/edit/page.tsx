@@ -10,14 +10,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function AdminEditCoursePage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
-    const course = await getCourseById(params.id);
+
+    // Fetch data secara paralel (Course, Tingkatan Kelas, dan Tutor)
+    const [course, classLevels, tutors] = await Promise.all([
+        getCourseById(params.id),
+        getClassLevelsForSelect(),
+        getTutorsForSelect(),
+    ]);
 
     if (!course) {
         notFound();
     }
-
-    const classLevels = await getClassLevelsForSelect();
-    const tutors = await getTutorsForSelect();
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">

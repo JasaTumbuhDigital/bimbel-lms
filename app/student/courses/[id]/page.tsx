@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getCourseById } from "@/lib/data/course";
+import { getCourseBasicInfo, getCourseById } from "@/lib/data/course";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { getPublicUrl } from "@/lib/supabase-storage";
 import Image from "next/image";
@@ -9,6 +9,8 @@ import { WishlistButton } from "@/components/student/wishlist-button";
 import { CourseReviewSection } from "@/components/student/course-review-section";
 import { getCourseReviewsData, getStudentReviewForCourse } from "@/lib/data/review";
 import { prisma } from "@/lib/prisma";
+import { Suspense } from "react";
+import { CurriculumSkeleton } from "@/components/ui/skeletons";
 
 export const metadata = {
     title: "Detail Kursus - Student",
@@ -20,59 +22,36 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
         redirect("/login");
     }
 
-    const params = await props.params;
-    const course = await getCourseById(params.id);
+    const { id } = await props.params;
+    const courseBasic = await getCourseBasicInfo(id);
 
-    if (!course) {
+    if (!courseBasic) {
         notFound();
     }
 
-    const isEnrolled = course.enrollments && course.enrollments.length > 0;
+    const isEnrolled = courseBasic.enrollments && courseBasic.enrollments.length > 0;
 
-    // --- Data Wishlist & Reviews ---
+    // --- Data Wishlist & Reviews yang ringan ---
     const studentId = user.studentProfile?.id;
     let isWishlisted = false;
     let studentReview = null;
 
     if (studentId) {
         const existingWishlist = await prisma.wishlist.findUnique({
-            where: { studentId_courseId: { studentId, courseId: course.id } }
+            where: { studentId_courseId: { studentId, courseId: courseBasic.id } }
         });
         isWishlisted = !!existingWishlist;
 
         if (isEnrolled) {
-            studentReview = await getStudentReviewForCourse(course.id);
+            studentReview = await getStudentReviewForCourse(courseBasic.id);
         }
     }
     
-    const { reviews } = await getCourseReviewsData(course.id);
-    // ---------------------------------
-
-    // Temukan lesson pertama untuk tombol "Lanjutkan Belajar"
-    let firstLessonId: string | null = null;
-    let totalLessons = 0;
-    let completedLessons = 0;
-
-    course.modules.forEach((module) => {
-        totalLessons += module.lessons.length;
-        if (!firstLessonId && module.lessons.length > 0) {
-            firstLessonId = module.lessons[0].id;
-        }
-        module.lessons.forEach((lesson) => {
-            if ((lesson as any).progress && (lesson as any).progress.length > 0 && (lesson as any).progress[0].isCompleted) {
-                completedLessons++;
-            }
-        });
-    });
-
-    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-    const isCourseCompleted = totalLessons > 0 && completedLessons === totalLessons;
-
-    const fullImageUrl = getPublicUrl(course.thumbnailUrl || null);
+    const fullImageUrl = getPublicUrl(courseBasic.thumbnailUrl || null);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-            {/* Header / Hero Section */}
+            {/* Header / Hero Section - Load Instan */}
             <div className="bg-white border-b border-slate-200">
                 <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
 
@@ -81,7 +60,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                         {fullImageUrl ? (
                             <Image
                                 src={fullImageUrl}
-                                alt={course.title}
+                                alt={courseBasic.title}
                                 fill
                                 className="object-cover"
                                 priority
@@ -101,55 +80,108 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                         <Link href="/student/courses" className="text-sm text-blue-600 hover:underline mb-2 inline-block">
                             &larr; Kembali ke Daftar Kursus
                         </Link>
-                        <h1 className="text-3xl font-bold text-slate-900">{course.title}</h1>
+                        <h1 className="text-3xl font-bold text-slate-900">{courseBasic.title}</h1>
                         <p className="text-slate-600 leading-relaxed text-sm md:text-base">
-                            {course.description || "Tidak ada deskripsi kursus yang tersedia."}
+                            {courseBasic.description || "Tidak ada deskripsi kursus yang tersedia."}
                         </p>
 
                         <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
-                            {isEnrolled ? (
-                                <Link
-                                    href={firstLessonId ? `/student/courses/${course.id}/learn/${firstLessonId}` : "#"}
-                                    className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all text-center"
-                                >
-                                    {firstLessonId ? "Lanjutkan Belajar" : "Belum Ada Materi"}
-                                </Link>
-                            ) : (
+                            {!isEnrolled ? (
                                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                                    <EnrollButton courseId={course.id} />
-                                    <WishlistButton courseId={course.id} initialIsWishlisted={isWishlisted} />
+                                    <EnrollButton courseId={courseBasic.id} />
+                                    <WishlistButton courseId={courseBasic.id} initialIsWishlisted={isWishlisted} />
                                 </div>
-                            )}
+                            ) : null}
 
                             <div className="text-sm text-slate-500 font-medium bg-slate-100 px-4 py-2 rounded-lg">
-                                {course.modules.length} Modul &bull; {totalLessons} Materi
+                                {courseBasic._count.modules} Modul
                             </div>
                         </div>
 
-                        {isEnrolled && (
-                            <div className="pt-4 border-t border-slate-100">
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="font-medium text-slate-700">Progres Belajar</span>
-                                    <span className="text-slate-500">{completedLessons} / {totalLessons} Materi ({progressPercentage}%)</span>
-                                </div>
-                                <div className="w-full bg-slate-200 rounded-full h-2">
-                                    <div
-                                        className={`h-2 rounded-full ${isCourseCompleted ? 'bg-green-500' : 'bg-blue-600'}`}
-                                        style={{ width: `${progressPercentage}%` }}
-                                    ></div>
-                                </div>
-                                {isCourseCompleted && (
-                                    <p className="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        Selamat! Anda telah menyelesaikan seluruh materi di kursus ini.
-                                    </p>
-                                )}
-                            </div>
-                        )}
+                        {/* Progress Bar Skeleton while loading full curriculum */}
+                        <Suspense fallback={<div className="pt-4 mt-4 border-t border-slate-100 h-16 animate-pulse bg-slate-50 rounded"></div>}>
+                            <CourseProgress courseId={courseBasic.id} isEnrolled={isEnrolled} />
+                        </Suspense>
                     </div>
                 </div>
             </div>
 
+            {/* Kurikulum & Review - Suspended */}
+            <Suspense fallback={<CurriculumSkeleton />}>
+                <CourseCurriculum courseId={courseBasic.id} isEnrolled={isEnrolled} studentReview={studentReview} />
+            </Suspense>
+        </div>
+    );
+}
+
+// --- Komponen-Komponen Async yang Suspended ---
+
+async function CourseProgress({ courseId, isEnrolled }: { courseId: string, isEnrolled: boolean }) {
+    if (!isEnrolled) return null;
+    
+    // Kita butuh getCourseById untuk menghitung progress lessons
+    const course = await getCourseById(courseId);
+    if (!course) return null;
+
+    let firstLessonId: string | null = null;
+    let totalLessons = 0;
+    let completedLessons = 0;
+
+    course.modules.forEach((module) => {
+        totalLessons += module.lessons.length;
+        if (!firstLessonId && module.lessons.length > 0) {
+            firstLessonId = module.lessons[0].id;
+        }
+        module.lessons.forEach((lesson) => {
+            if ((lesson as any).progress && (lesson as any).progress.length > 0 && (lesson as any).progress[0].isCompleted) {
+                completedLessons++;
+            }
+        });
+    });
+
+    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const isCourseCompleted = totalLessons > 0 && completedLessons === totalLessons;
+
+    return (
+        <>
+            <div className="pt-4 mt-4 border-t border-slate-100">
+                <Link
+                    href={firstLessonId ? `/student/courses/${course.id}/learn/${firstLessonId}` : "#"}
+                    className="inline-block w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all text-center mb-4"
+                >
+                    {firstLessonId ? "Lanjutkan Belajar" : "Belum Ada Materi"}
+                </Link>
+
+                <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-slate-700">Progres Belajar</span>
+                    <span className="text-slate-500">{completedLessons} / {totalLessons} Materi ({progressPercentage}%)</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                        className={`h-2 rounded-full ${isCourseCompleted ? 'bg-green-500' : 'bg-blue-600'}`}
+                        style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                </div>
+                {isCourseCompleted && (
+                    <p className="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        Selamat! Anda telah menyelesaikan seluruh materi di kursus ini.
+                    </p>
+                )}
+            </div>
+        </>
+    );
+}
+
+
+async function CourseCurriculum({ courseId, isEnrolled, studentReview }: { courseId: string, isEnrolled: boolean, studentReview: any }) {
+    const course = await getCourseById(courseId);
+    if (!course) return null;
+
+    const { reviews } = await getCourseReviewsData(course.id);
+
+    return (
+        <>
             {/* Kurikulum / Daftar Modul */}
             <div className="max-w-3xl mx-auto px-6 py-12">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Kurikulum Kursus</h2>
@@ -253,6 +285,6 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                     reviews={reviews as any}
                 />
             </div>
-        </div>
+        </>
     );
 }

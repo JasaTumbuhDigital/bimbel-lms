@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { logoutAction } from "@/lib/actions/auth";
 import { getAdminDashboardSummary } from "@/lib/data/admin-dashboard";
+import { Suspense } from "react";
+import { DashboardStatsSkeleton } from "@/components/ui/skeletons";
 
-export default async function AdminDashboardPage() {
-    const summary = await getAdminDashboardSummary();
-
+export default function AdminDashboardPage() {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
             <div className="max-w-4xl mx-auto space-y-8">
@@ -26,29 +26,10 @@ export default async function AdminDashboardPage() {
                     </form>
                 </header>
 
-                {/* Section Summary */}
-                <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
-                        <span className="text-sm font-medium text-slate-500 mb-1">Total Siswa Aktif</span>
-                        <span className="text-3xl font-bold text-blue-600">{summary.totalSiswa}</span>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
-                        <span className="text-sm font-medium text-slate-500 mb-1">Total Tutor Aktif</span>
-                        <span className="text-3xl font-bold text-blue-600">{summary.totalTutor}</span>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
-                        <span className="text-sm font-medium text-slate-500 mb-1">Jumlah Kursus</span>
-                        <span className="text-3xl font-bold text-blue-600">{summary.totalKursus}</span>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
-                        <span className="text-sm font-medium text-slate-500 mb-1">Kelas Berjalan</span>
-                        <span className="text-3xl font-bold text-blue-600">{summary.kelasBerjalan}</span>
-                    </div>
-                </section>
-
+                {/* Section Summary dengan Suspense */}
+                <Suspense fallback={<DashboardStatsSkeleton />}>
+                    <DashboardStats />
+                </Suspense>
 
                 {/* Grid Menu Navigasi Admin */}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -119,5 +100,33 @@ export default async function AdminDashboardPage() {
                 </section>
             </div>
         </div>
+    );
+}
+
+async function DashboardStats() {
+    const summary = await getAdminDashboardSummary();
+
+    return (
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                <span className="text-sm font-medium text-slate-500 mb-1">Total Siswa Aktif</span>
+                <span className="text-3xl font-bold text-blue-600">{summary.totalSiswa}</span>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                <span className="text-sm font-medium text-slate-500 mb-1">Total Tutor Aktif</span>
+                <span className="text-3xl font-bold text-blue-600">{summary.totalTutor}</span>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                <span className="text-sm font-medium text-slate-500 mb-1">Jumlah Kursus</span>
+                <span className="text-3xl font-bold text-blue-600">{summary.totalKursus}</span>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                <span className="text-sm font-medium text-slate-500 mb-1">Kelas Berjalan</span>
+                <span className="text-3xl font-bold text-blue-600">{summary.kelasBerjalan}</span>
+            </div>
+        </section>
     );
 }

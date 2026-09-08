@@ -23,8 +23,10 @@ export async function getStudentWishlist() {
                     title: true,
                     thumbnailUrl: true,
                     classLevels: {
-                        include: {
-                            classLevel: true
+                        select: {
+                            classLevel: {
+                                select: { name: true }
+                            }
                         }
                     }
                 }
