@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getClassLevels } from "@/lib/data/class-level";
 import CreateClassLevelForm from "@/components/class-level/CreateClassLevelForm";
 import DeleteClassLevelButton from "@/components/class-level/DeleteClassLevelButton";
+import EditClassLevelButton from "@/components/class-level/EditClassLevelButton";
 import { Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/skeletons";
 
@@ -86,11 +87,14 @@ async function ClassLevelsTable() {
                                         )}
                                     </td>
                                     <td className="py-3 px-4 text-right">
-                                        <DeleteClassLevelButton
-                                            id={level.id}
-                                            name={level.name}
-                                            studentCount={level._count.studentProfiles}
-                                        />
+                                        <div className="flex items-center justify-end gap-3">
+                                            <EditClassLevelButton level={level} />
+                                            <DeleteClassLevelButton
+                                                id={level.id}
+                                                name={level.name}
+                                                studentCount={level._count.studentProfiles}
+                                            />
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
