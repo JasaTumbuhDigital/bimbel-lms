@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createClassLevelAction } from "@/lib/actions/class-level";
 import { ActionResult } from "@/types/action";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function CreateClassLevelForm() {
   const [state, formAction, isPending] = useActionState<ActionResult, FormData>(
@@ -14,28 +16,17 @@ export default function CreateClassLevelForm() {
   useEffect(() => {
     if (state.success && formRef.current) {
       formRef.current.reset();
+      toast.success(state.message || "Tingkatan kelas berhasil ditambahkan");
+    } else if (state.error) {
+      toast.error(state.error);
     }
-  }, [state.success]);
+  }, [state]);
 
   return (
     <section className="bg-white border border-slate-200 rounded-lg p-6 space-y-4">
-      <h2 className="text-base font-semibold text-slate-900">
+      <h2 className="text-base font-semibold text-slate-900 mb-4">
         Tambah Tingkatan Kelas Baru
       </h2>
-
-      {/* Alert Error General */}
-      {state.error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
-          {state.error}
-        </div>
-      )}
-
-      {/* Alert Sukses */}
-      {state.success && state.message && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-          {state.message}
-        </div>
-      )}
 
       <form ref={formRef} action={formAction} className="space-y-4 max-w-lg">
         <div className="space-y-1">
@@ -82,9 +73,9 @@ export default function CreateClassLevelForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm disabled:opacity-50"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {isPending ? "Menyimpan..." : "Simpan Tingkatan Kelas"}
+          {isPending ? <><Spinner /> Menyimpan...</> : "Simpan Tingkatan Kelas"}
         </button>
       </form>
     </section>

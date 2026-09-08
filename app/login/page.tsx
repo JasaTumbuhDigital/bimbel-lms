@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { institutionConfig } from "@/config/institution";
 import { loginAction } from "@/lib/actions/auth";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -20,13 +21,15 @@ export default function LoginPage() {
             const res = await loginAction(null, formData);
             if (!res.success) {
                 setErrorMsg(res.error || "Gagal melakukan login.");
+                setIsPending(false);
             } else if (res.data?.redirectTo) {
                 router.push(res.data.redirectTo);
                 router.refresh();
+                // Sengaja tidak set isPending(false) agar tombol tetap loading
+                // selama Next.js memuat halaman dashboard
             }
         } catch (err) {
             setErrorMsg("Terjadi kesalahan sistem saat mencoba login.");
-        } finally {
             setIsPending(false);
         }
     };
@@ -80,9 +83,9 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 text-sm"
+                        className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 text-sm flex items-center justify-center gap-2"
                     >
-                        {isPending ? "Memproses..." : "Masuk ke Akun"}
+                        {isPending ? <><Spinner /> Memproses...</> : "Masuk ke Akun"}
                     </button>
                 </form>
 

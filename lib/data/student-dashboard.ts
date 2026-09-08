@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { cache } from "react";
 
-export async function getStudentDashboardSummary(studentId: string) {
+export const getStudentDashboardSummary = cache(async (studentId: string) => {
     // 1. Ambil semua kursus yang di-enroll oleh siswa ini beserta ID materinya
     const courses = await prisma.course.findMany({
         where: { 
@@ -59,4 +60,4 @@ export async function getStudentDashboardSummary(studentId: string) {
     };
 
     return summary;
-}
+});

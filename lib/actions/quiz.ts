@@ -5,12 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
 import { verifyCourseAccess } from "@/lib/data/course-access";
-import { reorderSchema } from "../validations/module";
 import {
     createQuizSchema,
     updateQuizSchema,
     saveQuizQuestionSchema,
-    submitQuizAttemptSchema
+    submitQuizAttemptSchema,
+    reorderSchema
 } from "@/lib/validations/quiz";
 
 // ==========================================
@@ -51,13 +51,13 @@ export async function createQuizAction(
         const existingQuiz = await prisma.quiz.findUnique({ where: { moduleId } });
         if (existingQuiz) return { success: false, error: "Modul ini sudah memiliki kuis." };
 
-        await prisma.quiz.create({
+        const newQuiz = await prisma.quiz.create({
             data: { moduleId, title, passingScorePercent, isRandomized }
         });
 
         revalidatePath(`/admin/courses/${moduleRecord.courseId}/edit`);
         revalidatePath(`/tutor/courses/${moduleRecord.courseId}/edit`);
-        return { success: true, message: "Kuis berhasil dibuat" };
+        return { success: true, message: "Kuis berhasil dibuat", data: newQuiz };
     } catch (error) {
         return { success: false, error: String(error) || "Terjadi kesalahan" };
     }

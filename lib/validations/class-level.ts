@@ -8,3 +8,7 @@ export const classLevelSchema = z.object({
     description: z.string().optional(),
     isDefault: z.boolean().default(false),
 });
+
+export const updateClassLevelSchema = classLevelSchema.partial().extend({
+    id: z.string().uuid("ID Kelas tidak valid"),
+});

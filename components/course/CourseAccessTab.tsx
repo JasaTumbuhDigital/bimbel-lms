@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { updateCourseAccessAction } from "@/lib/actions/course";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function CourseAccessTab({ 
     course, 
@@ -144,9 +145,9 @@ export default function CourseAccessTab({
                 <button 
                     type="submit" 
                     disabled={isPending}
-                    className="bg-blue-600 text-white px-5 py-2 text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    className="bg-blue-600 text-white px-5 py-2 text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
-                    {isPending ? "Menyimpan..." : "Simpan Pengaturan Akses"}
+                    {isPending ? <><Spinner /> Menyimpan...</> : "Simpan Pengaturan Akses"}
                 </button>
             </div>
         </form>

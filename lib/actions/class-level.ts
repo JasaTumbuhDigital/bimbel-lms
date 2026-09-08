@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
-import { classLevelSchema } from "@/lib/validations/class-level";
+import { classLevelSchema, updateClassLevelSchema } from "@/lib/validations/class-level";
 import { getAuthenticatedUser, checkAdminPermission } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
 
@@ -66,7 +66,65 @@ export async function createClassLevelAction(
 }
 
 /**
- * 2. Action Hapus Tingkatan Kelas (Admin Only)
+ * 2. Action Update Tingkatan Kelas (Admin Only)
+ */
+export async function updateClassLevelAction(
+    prevState: ActionResult | null,
+    formData: FormData
+): Promise<ActionResult> {
+    const admin = await checkAdminPermission();
+    if (!admin) {
+        return { success: false, error: "Akses ditolak. Hanya Admin yang diizinkan." };
+    }
+
+    const rawData = {
+        id: formData.get("id") as string,
+        name: formData.get("name") as string,
+        description: formData.has("description") ? (formData.get("description") as string) : undefined,
+        isDefault: formData.get("isDefault") === "true",
+    };
+
+    const validation = updateClassLevelSchema.safeParse(rawData);
+    if (!validation.success) {
+        return {
+            success: false,
+            error: "Validasi data kelas gagal",
+            fieldErrors: validation.error.flatten().fieldErrors,
+        };
+    }
+
+    const { id, name, description, isDefault } = validation.data;
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            if (isDefault) {
+                await tx.classLevel.updateMany({
+                    data: { isDefault: false },
+                });
+            }
+            await tx.classLevel.update({
+                where: { id },
+                data: {
+                    name,
+                    description,
+                    isDefault,
+                },
+            });
+        });
+
+        revalidatePath("/admin/class-levels");
+        return { success: true, message: `Tingkatan kelas "${name}" berhasil diperbarui.` };
+    } catch (error) {
+        const dbError = error as { code?: string };
+        if (dbError.code === "P2002") {
+            return { success: false, error: `Tingkatan kelas dengan nama "${name}" sudah ada.` };
+        }
+        return { success: false, error: "Gagal memperbarui tingkatan kelas." };
+    }
+}
+
+/**
+ * 3. Action Hapus Tingkatan Kelas (Admin Only)
  */
 export async function deleteClassLevelAction(id: string): Promise<ActionResult> {
     const admin = await checkAdminPermission();
