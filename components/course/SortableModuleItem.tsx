@@ -20,13 +20,15 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
-import { reorderLessonsAction, createLessonAction, updateModuleAction, deleteModuleAction } from "@/lib/actions/module";
+import { updateModuleAction, deleteModuleAction } from "@/lib/actions/module";
+import { reorderLessonsAction, createLessonAction } from "@/lib/actions/lesson";
 import { createQuizAction, updateQuizAction, deleteQuizAction } from "@/lib/actions/quiz";
 import QuizBuilderModal from "../quiz/QuizBuilder";
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
 import SortableLessonItem from "./SortableLessonItem";
 import DocumentUpload from "@/components/ui/DocumentUpload";
+import { Spinner } from "@/components/ui/skeletons";
 
 const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
 
@@ -42,7 +44,8 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
     // Sync state with server changes
     useEffect(() => {
         setLessons(module.lessons || []);
-    }, [module.lessons]);
+        setQuiz(module.quiz || null);
+    }, [module.lessons, module.quiz]);
 
     // Form Add Lesson states
     const [lessonTitle, setLessonTitle] = useState("");
@@ -55,6 +58,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
     const [editModuleTitle, setEditModuleTitle] = useState(module.title);
 
     //Quiz states
+    const [quiz, setQuiz] = useState(module.quiz || null);
     const [isAddingQuiz, setIsAddingQuiz] = useState(false);
     const [quizTitle, setQuizTitle] = useState(`Kuis: ${module.title}`);
     const [passingScore, setPassingScore] = useState(70);
@@ -63,18 +67,24 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
 
     // Edit & Delete Quiz states
     const [isEditingQuizDetails, setIsEditingQuizDetails] = useState(false);
-    const [editQuizTitle, setEditQuizTitle] = useState(module.quiz?.title || "");
-    const [editQuizPassingScore, setEditQuizPassingScore] = useState(module.quiz?.passingScorePercent || 70);
+    const [editQuizTitle, setEditQuizTitle] = useState(quiz?.title || "");
+    const [editQuizPassingScore, setEditQuizPassingScore] = useState(quiz?.passingScorePercent || 70);
+
+    const [confirmConfig, setConfirmConfig] = useState<{ title: string; message: string; action: () => Promise<void> } | null>(null);
 
     const handleUpdateQuizDetails = async (e: React.FormEvent) => {
         e.preventDefault();
         startTransition(async () => {
+            if (!quiz) return;
             const formData = new FormData();
-            formData.append("id", module.quiz.id);
+            formData.append("id", quiz.id);
             formData.append("title", editQuizTitle);
             formData.append("passingScorePercent", editQuizPassingScore.toString());
             const res = await updateQuizAction(null, formData);
             if (res.success) {
+                if (quiz) {
+                    setQuiz({ ...quiz, title: editQuizTitle, passingScorePercent: editQuizPassingScore });
+                }
                 toast.success("Kuis berhasil diperbarui");
                 setIsEditingQuizDetails(false);
             } else {
@@ -83,15 +93,20 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         });
     };
 
-    const handleDeleteQuiz = async () => {
-        if (!confirm("Apakah Anda yakin ingin menghapus kuis ini beserta seluruh soalnya?")) return;
-        startTransition(async () => {
-            const res = await deleteQuizAction(module.quiz.id);
-            if (res.success) {
-                toast.success("Kuis berhasil dihapus");
-                setIsQuizModalOpen(false);
-            } else {
-                toast.error(res.error || "Gagal menghapus kuis");
+    const handleDeleteQuiz = () => {
+        setConfirmConfig({
+            title: "Hapus Kuis",
+            message: "Apakah Anda yakin ingin menghapus kuis ini beserta seluruh soalnya?",
+            action: async () => {
+                const res = await deleteQuizAction(quiz.id);
+                if (res.success) {
+                    toast.success("Kuis berhasil dihapus");
+                    setQuiz(null);
+                    setIsQuizModalOpen(false);
+                    setConfirmConfig(null);
+                } else {
+                    toast.error(res.error || "Gagal menghapus kuis");
+                }
             }
         });
     };
@@ -152,10 +167,14 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
 
             const res = await createLessonAction(null, formData);
             if (res.success) {
+                if (res.data) {
+                    setLessons((prev: any) => [...prev, res.data]);
+                }
                 setLessonTitle("");
                 setVideoUrl("");
                 setFileUrl("");
                 setIsAddingLesson(false);
+                toast.success(res.message);
             } else {
                 toast.error(res.error || res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error");
             }
@@ -192,12 +211,18 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
         });
     };
 
-    const handleDeleteModule = async () => {
-        if (!confirm("Apakah Anda yakin ingin menghapus modul ini beserta seluruh materinya?")) return;
-        startTransition(async () => {
-            const res = await deleteModuleAction(module.id);
-            if (!res.success) {
-                toast.error(res.error);
+    const handleDeleteModule = () => {
+        setConfirmConfig({
+            title: "Hapus Modul",
+            message: "Apakah Anda yakin ingin menghapus modul ini beserta seluruh materinya?",
+            action: async () => {
+                const res = await deleteModuleAction(module.id);
+                if (res.success) {
+                    toast.success("Modul berhasil dihapus");
+                    setConfirmConfig(null);
+                } else {
+                    toast.error(res.error || "Gagal menghapus modul");
+                }
             }
         });
     };
@@ -212,6 +237,9 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
             formData.append("isRandomized", isRandomized.toString());
             const res = await createQuizAction(null, formData);
             if (res.success) {
+                if (res.data) {
+                    setQuiz(res.data);
+                }
                 setIsAddingQuiz(false);
                 toast.success(res.message);
             } else {
@@ -234,7 +262,9 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                             className="flex-1 p-1.5 border border-gray-300 rounded text-sm"
                             autoFocus
                         />
-                        <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-2 py-1.5 text-xs rounded hover:bg-blue-700">Simpan</button>
+                        <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-2 py-1.5 text-xs rounded hover:bg-blue-700 flex items-center justify-center gap-1">
+                            {isPending ? <Spinner className="w-3 h-3" /> : null} Simpan
+                        </button>
                         <button type="button" disabled={isPending} onClick={() => setIsEditingModule(false)} className="text-gray-600 px-2 py-1.5 text-xs hover:bg-gray-200 rounded">Batal</button>
                     </form>
                 ) : (
@@ -338,7 +368,9 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                 )}
 
                                 <div className="flex gap-2 pt-2">
-                                    <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded hover:bg-blue-700 disabled:opacity-50">Simpan Materi</button>
+                                    <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-4 py-2 text-sm rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                                        {isPending ? <><Spinner /> Menyimpan...</> : "Tambah Materi"}
+                                    </button>
                                     <button type="button" disabled={isPending} onClick={handleCancelAddLesson} className="text-gray-600 px-3 py-1.5 text-sm hover:bg-gray-200 rounded">Batal</button>
                                 </div>
                             </div>
@@ -348,28 +380,34 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                     <div className="mt-8 pt-4 border-t border-gray-200">
                         <h4 className="font-semibold text-sm text-gray-800 mb-3">Evaluasi Modul</h4>
 
-                        {module.quiz ? (
+                        {quiz ? (
                             !isEditingQuizDetails ? (
-                                <div className="flex items-center justify-between bg-purple-50 p-3.5 rounded-md border border-purple-100">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h5 className="font-medium text-sm text-purple-900">{module.quiz.title}</h5>
-                                            {module.quiz.isRandomized && (
-                                                <span className="text-[10px] bg-purple-200 text-purple-800 px-1.5 py-0.5 rounded font-medium">
-                                                    Acak
-                                                </span>
-                                            )}
+                                <div className="flex items-center justify-between p-3 bg-purple-50 rounded-md border border-purple-100">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-purple-100 p-2 rounded-md text-purple-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                                            </svg>
                                         </div>
-                                        <p className="text-xs text-purple-700 mt-1">
-                                            KKM: {module.quiz.passingScorePercent}% • {module.quiz.questions?.length || 0} Soal
-                                        </p>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h5 className="font-medium text-sm text-purple-900">{quiz.title}</h5>
+                                                {quiz.isRandomized && (
+                                                    <span className="text-[10px] bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">Acak</span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-purple-700 mt-0.5">
+                                                KKM: {quiz.passingScorePercent}% • {quiz.questions?.length || 0} Soal
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                setEditQuizTitle(module.quiz.title);
-                                                setEditQuizPassingScore(module.quiz.passingScorePercent);
+                                                setEditQuizTitle(quiz.title);
+                                                setEditQuizPassingScore(quiz.passingScorePercent);
                                                 setIsEditingQuizDetails(true);
                                             }}
                                             className="text-xs text-purple-700 hover:text-purple-900 font-medium px-2 py-1 hover:bg-purple-100 rounded transition-colors"
@@ -385,7 +423,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                             Hapus
                                         </button>
                                         <button
-                                            onClick={() => setIsQuizModalOpen(!isQuizModalOpen)} 
+                                            onClick={() => setIsQuizModalOpen(!isQuizModalOpen)}
                                             className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${isQuizModalOpen ? 'bg-purple-200 text-purple-800 hover:bg-purple-300' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
                                         >
                                             {isQuizModalOpen ? "Tutup Builder" : "Kelola Soal"}
@@ -430,9 +468,9 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                         <button
                                             type="submit"
                                             disabled={isPending}
-                                            className="bg-purple-600 text-white px-3 py-1.5 text-xs rounded hover:bg-purple-700 font-medium disabled:opacity-50"
+                                            className="bg-purple-600 text-white px-3 py-1.5 text-xs rounded hover:bg-purple-700 font-medium disabled:opacity-50 flex items-center justify-center gap-1"
                                         >
-                                            Simpan Perubahan
+                                            {isPending ? <><Spinner className="w-3 h-3" /> Menyimpan...</> : "Simpan Perubahan"}
                                         </button>
                                     </div>
                                 </form>
@@ -471,8 +509,8 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                         />
                                     </div>
                                     <label className="flex items-start gap-2 text-sm mt-2 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={isRandomized}
                                             onChange={(e) => setIsRandomized(e.target.checked)}
                                             className="mt-1 rounded text-purple-600 focus:ring-purple-500"
@@ -483,8 +521,8 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                         </div>
                                     </label>
                                     <div className="flex gap-2 pt-2">
-                                        <button type="submit" disabled={isPending} className="bg-purple-600 text-white px-3 py-1.5 text-sm rounded hover:bg-purple-700 disabled:opacity-50">
-                                            Simpan Kuis
+                                        <button type="submit" disabled={isPending} className="bg-purple-600 text-white px-3 py-1.5 text-sm rounded hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-1">
+                                            {isPending ? <><Spinner /> Menyimpan...</> : "Simpan Kuis"}
                                         </button>
                                         <button type="button" disabled={isPending} onClick={() => setIsAddingQuiz(false)} className="text-gray-600 px-3 py-1.5 text-sm hover:bg-gray-200 rounded">
                                             Batal
@@ -495,17 +533,58 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                         )}
 
                         {/* Inline Quiz Builder */}
-                        {isQuizModalOpen && module.quiz && (
+                        {isQuizModalOpen && quiz && (
                             <div className="mt-4 border-2 border-purple-100 rounded-lg overflow-hidden bg-white">
                                 <QuizBuilderModal
-                                    quiz={module.quiz}
                                     onClose={() => setIsQuizModalOpen(false)}
+                                    quiz={quiz}
                                 />
                             </div>
                         )}
                     </div>
                 </div>
             )}
+
+            {/* Modal Konfirmasi Hapus */}
+            {confirmConfig && (
+                <ConfirmModal
+                    title={confirmConfig.title}
+                    message={confirmConfig.message}
+                    onConfirm={confirmConfig.action}
+                    onClose={() => setConfirmConfig(null)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Sub-komponen Modal Konfirmasi
+function ConfirmModal({ title, message, onConfirm, onClose }: { title: string; message: string; onConfirm: () => Promise<void>; onClose: () => void }) {
+    const [isPending, setIsPending] = useState(false);
+
+    const handleConfirm = async () => {
+        setIsPending(true);
+        await onConfirm();
+        setIsPending(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-sm p-6 space-y-4 shadow-xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-slate-900">{title}</h2>
+                    <button onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+                <p className="text-sm text-slate-600">{message}</p>
+                <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={onClose} disabled={isPending} className="text-sm px-4 py-1.5 border border-slate-200 rounded-md text-slate-600">
+                        Batal
+                    </button>
+                    <button onClick={handleConfirm} disabled={isPending} className="text-sm px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                        {isPending ? <><Spinner /> Menghapus...</> : "Hapus"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

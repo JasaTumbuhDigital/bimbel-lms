@@ -7,6 +7,8 @@ import {
     updateUserAccountAction,
 } from "@/lib/actions/user";
 import { updateStudentClassLevelAction } from "@/lib/actions/class-level";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/skeletons";
 
 type UserData = {
     id: string;
@@ -35,47 +37,51 @@ export default function UserRowActions({
     activeTab: "student" | "tutor" | "admin";
     currentAdminId?: string;
 }) {
-    const [isPending, startTransition] = useTransition();
-    const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showClassModal, setShowClassModal] = useState(false);
-
-    const clearFeedback = () => setTimeout(() => setFeedback(null), 4000);
+    const [confirmConfig, setConfirmConfig] = useState<{ title: string; message: string; action: () => Promise<void> } | null>(null);
 
     const handleToggleActive = () => {
-        const action = user.isActive ? "menonaktifkan" : "mengaktifkan";
-        if (!confirm(`Apakah yakin ingin ${action} akun ${user.name}?`)) return;
-
-        startTransition(async () => {
-            const res = await toggleUserActiveAction(user.id, !user.isActive);
-            setFeedback({ type: res.success ? "success" : "error", msg: res.message || res.error || "" });
-            clearFeedback();
+        const actionText = user.isActive ? "menonaktifkan" : "mengaktifkan";
+        setConfirmConfig({
+            title: user.isActive ? "Nonaktifkan Akun" : "Aktifkan Akun",
+            message: `Apakah Anda yakin ingin ${actionText} akun ${user.name}?`,
+            action: async () => {
+                const res = await toggleUserActiveAction(user.id, !user.isActive);
+                if (res.success) {
+                    toast.success(res.message || "Status akun berhasil diubah");
+                    setConfirmConfig(null);
+                } else {
+                    toast.error(res.error || "Gagal mengubah status akun");
+                }
+            }
         });
     };
 
     const handleResetPassword = () => {
-        if (!confirm(`Reset password ${user.name} ke default? Mereka wajib ganti password saat login berikutnya.`)) return;
-
-        startTransition(async () => {
-            const res = await resetUserPasswordAction(user.id, user.authId);
-            setFeedback({ type: res.success ? "success" : "error", msg: res.message || res.error || "" });
-            clearFeedback();
+        setConfirmConfig({
+            title: "Reset Password",
+            message: `Apakah Anda yakin ingin mereset password ${user.name} ke default? Pengguna wajib mengganti password saat login berikutnya.`,
+            action: async () => {
+                const res = await resetUserPasswordAction(user.id, user.authId);
+                if (res.success) {
+                    toast.success(res.message || "Password berhasil direset");
+                    setConfirmConfig(null);
+                } else {
+                    toast.error(res.error || "Gagal mereset password");
+                }
+            }
         });
     };
 
+
+
     return (
         <div className="flex items-center justify-end gap-2 flex-wrap">
-            {feedback && (
-                <span className={`text-xs ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
-                    {feedback.msg}
-                </span>
-            )}
-
             {/* Tombol Edit */}
             <button
                 onClick={() => setShowEditModal(true)}
                 className="text-xs text-blue-600 hover:underline"
-                disabled={isPending}
             >
                 Edit
             </button>
@@ -84,7 +90,6 @@ export default function UserRowActions({
             <button
                 onClick={handleResetPassword}
                 className="text-xs text-amber-600 hover:underline"
-                disabled={isPending}
             >
                 Reset PW
             </button>
@@ -94,7 +99,6 @@ export default function UserRowActions({
                 <button
                     onClick={() => setShowClassModal(true)}
                     className="text-xs text-indigo-600 hover:underline"
-                    disabled={isPending}
                 >
                     Ubah Kelas
                 </button>
@@ -105,7 +109,6 @@ export default function UserRowActions({
                 <button
                     onClick={handleToggleActive}
                     className={`text-xs hover:underline ${user.isActive ? "text-red-600" : "text-emerald-600"}`}
-                    disabled={isPending}
                 >
                     {user.isActive ? "Nonaktifkan" : "Aktifkan"}
                 </button>
@@ -127,6 +130,16 @@ export default function UserRowActions({
                     onClose={() => setShowClassModal(false)}
                 />
             )}
+
+            {/* Modal Konfirmasi Umum */}
+            {confirmConfig && (
+                <ConfirmModal
+                    title={confirmConfig.title}
+                    message={confirmConfig.message}
+                    onConfirm={confirmConfig.action}
+                    onClose={() => setConfirmConfig(null)}
+                />
+            )}
         </div>
     );
 }
@@ -146,6 +159,7 @@ function ChangeClassModal({ studentProfileId, classLevels, onClose }: { studentP
         startTransition(async () => {
             const res = await updateStudentClassLevelAction(studentProfileId, newClassLevelId);
             if (res.success) {
+                toast.success("Tingkatan kelas berhasil diubah.");
                 onClose();
             } else {
                 setError(res.error || "Gagal menyimpan.");
@@ -178,8 +192,8 @@ function ChangeClassModal({ studentProfileId, classLevels, onClose }: { studentP
                             Batal
                         </button>
                         <button type="submit" disabled={isPending}
-                            className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-50">
-                            {isPending ? "Menyimpan..." : "Simpan"}
+                            className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2">
+                            {isPending ? <><Spinner /> Menyimpan...</> : "Simpan"}
                         </button>
                     </div>
                 </form>
@@ -200,6 +214,7 @@ function EditModal({ user, onClose }: { user: UserData; onClose: () => void }) {
         startTransition(async () => {
             const res = await updateUserAccountAction(null, formData);
             if (res.success) {
+                toast.success("Profil berhasil diperbarui.");
                 onClose();
             } else {
                 setError(res.error || "Gagal menyimpan.");
@@ -250,11 +265,42 @@ function EditModal({ user, onClose }: { user: UserData; onClose: () => void }) {
                             Batal
                         </button>
                         <button type="submit" disabled={isPending}
-                            className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-50">
-                            {isPending ? "Menyimpan..." : "Simpan"}
+                            className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2">
+                            {isPending ? <><Spinner /> Menyimpan...</> : "Simpan"}
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+}
+
+// Sub-komponen Modal Konfirmasi
+function ConfirmModal({ title, message, onConfirm, onClose }: { title: string; message: string; onConfirm: () => Promise<void>; onClose: () => void }) {
+    const [isPending, setIsPending] = useState(false);
+
+    const handleConfirm = async () => {
+        setIsPending(true);
+        await onConfirm();
+        setIsPending(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-sm p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-slate-900">{title}</h2>
+                    <button onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+                <p className="text-sm text-slate-600">{message}</p>
+                <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={onClose} disabled={isPending} className="text-sm px-4 py-1.5 border border-slate-200 rounded-md text-slate-600">
+                        Batal
+                    </button>
+                    <button onClick={handleConfirm} disabled={isPending} className="text-sm px-4 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2">
+                        {isPending ? <><Spinner /> Memproses...</> : "Ya, Lanjutkan"}
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -4,13 +4,14 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { deleteLessonAction, updateLessonAction } from "@/lib/actions/module";
+import { deleteLessonAction, updateLessonAction } from "@/lib/actions/lesson";
 import DocumentUpload from "@/components/ui/DocumentUpload";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function SortableLessonItem({ lesson, courseId, moduleId }: { lesson: any; courseId: string; moduleId: string }) {
     const [isPending, startTransition] = useTransition();
     const [isEditing, setIsEditing] = useState(false);
-    
+
     // Form states
     const [lessonTitle, setLessonTitle] = useState(lesson.title);
     const [contentType, setContentType] = useState<"video" | "document">(lesson.contentType);
@@ -28,15 +29,16 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
         position: isDragging ? ("relative" as const) : ("static" as const),
     };
 
-    const handleDelete = () => {
-        if (!confirm("Apakah Anda yakin ingin menghapus materi ini? Dokumen yang terlampir (jika ada) juga akan dihapus.")) return;
-        
-        startTransition(async () => {
-            const res = await deleteLessonAction(lesson.id);
-            if (!res.success) {
-                toast.error(res.error);
-            }
-        });
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDelete = async () => {
+        const res = await deleteLessonAction(lesson.id);
+        if (!res.success) {
+            toast.error(res.error);
+        } else {
+            toast.success("Materi berhasil dihapus");
+            setShowDeleteConfirm(false);
+        }
     };
 
     const handleUpdate = async (e: React.FormEvent) => {
@@ -119,7 +121,9 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
                     )}
 
                     <div className="flex gap-2 pt-2">
-                        <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded hover:bg-blue-700 disabled:opacity-50">Simpan Perubahan</button>
+                        <button type="submit" disabled={isPending} className="bg-blue-600 text-white px-3 py-1.5 text-sm rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-1">
+                            {isPending ? <><Spinner className="w-3 h-3" /> Menyimpan...</> : "Simpan Perubahan"}
+                        </button>
                         <button type="button" disabled={isPending} onClick={() => setIsEditing(false)} className="text-gray-600 px-3 py-1.5 text-sm hover:bg-gray-200 rounded">Batal</button>
                     </div>
                 </form>
@@ -128,9 +132,9 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
     }
 
     return (
-        <div 
-            ref={setNodeRef} 
-            style={style} 
+        <div
+            ref={setNodeRef}
+            style={style}
             className={`flex items-center justify-between p-3 bg-white border border-gray-200 rounded-md shadow-sm ${isDragging ? "opacity-50" : "hover:border-gray-300"}`}
         >
             <div className="flex items-center gap-3 overflow-hidden">
@@ -142,22 +146,62 @@ export default function SortableLessonItem({ lesson, courseId, moduleId }: { les
                     <p className="text-xs text-gray-500 capitalize">{lesson.contentType}</p>
                 </div>
             </div>
-            
+
             <div className="flex items-center gap-2 shrink-0">
-                <button 
+                <button
                     onClick={() => setIsEditing(true)}
                     disabled={isPending}
                     className="text-blue-600 hover:text-blue-800 text-xs font-medium disabled:opacity-50"
                 >
                     Edit
                 </button>
-                <button 
-                    onClick={handleDelete}
+                <button
+                    onClick={() => setShowDeleteConfirm(true)}
                     disabled={isPending}
                     className="text-red-600 hover:text-red-800 text-xs font-medium disabled:opacity-50"
                 >
-                    {isPending ? "..." : "Hapus"}
+                    Hapus
                 </button>
+            </div>
+
+            {showDeleteConfirm && (
+                <ConfirmModal
+                    title="Hapus Materi"
+                    message="Apakah Anda yakin ingin menghapus materi ini? Dokumen yang terlampir (jika ada) juga akan dihapus."
+                    onConfirm={handleDelete}
+                    onClose={() => setShowDeleteConfirm(false)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Sub-komponen Modal Konfirmasi
+function ConfirmModal({ title, message, onConfirm, onClose }: { title: string; message: string; onConfirm: () => Promise<void>; onClose: () => void }) {
+    const [isPending, setIsPending] = useState(false);
+
+    const handleConfirm = async () => {
+        setIsPending(true);
+        await onConfirm();
+        setIsPending(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-sm p-6 space-y-4 shadow-xl border border-slate-200">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-slate-900">{title}</h2>
+                    <button onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+                <p className="text-sm text-slate-600">{message}</p>
+                <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={onClose} disabled={isPending} className="text-sm px-4 py-1.5 border border-slate-200 rounded-md text-slate-600">
+                        Batal
+                    </button>
+                    <button onClick={handleConfirm} disabled={isPending} className="text-sm px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                        {isPending ? <><Spinner /> Menghapus...</> : "Hapus"}
+                    </button>
+                </div>
             </div>
         </div>
     );

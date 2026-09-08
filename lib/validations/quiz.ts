@@ -36,3 +36,8 @@ export const submitQuizAttemptSchema = z.object({
         })
     ),
 });
+
+export const reorderSchema = z.object({
+    parentId: z.string().uuid("ID Induk tidak valid"),
+    orderedIds: z.array(z.string().uuid("ID urutan tidak valid")),
+});

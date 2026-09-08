@@ -1,19 +1,19 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { getCourseById } from "@/lib/data/course";
 import { getClassLevelsForSelect } from "@/lib/data/class-level";
 import { getTutorsForSelect } from "@/lib/data/user";
 import CourseBuilder from "@/components/course/CourseBuilder";
+import { CourseBuilderSkeleton } from "@/components/ui/skeletons";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
     return { title: "Edit Kursus - Admin" };
 }
 
-export default async function AdminEditCoursePage(props: { params: Promise<{ id: string }> }) {
-    const params = await props.params;
-
+async function AdminEditCourseContent({ courseId }: { courseId: string }) {
     // Fetch data secara paralel (Course, Tingkatan Kelas, dan Tutor)
     const [course, classLevels, tutors] = await Promise.all([
-        getCourseById(params.id),
+        getCourseById(courseId),
         getClassLevelsForSelect(),
         getTutorsForSelect(),
     ]);
@@ -21,6 +21,19 @@ export default async function AdminEditCoursePage(props: { params: Promise<{ id:
     if (!course) {
         notFound();
     }
+
+    return (
+        <CourseBuilder 
+            course={course} 
+            role="admin" 
+            availableClassLevels={classLevels} 
+            availableTutors={tutors} 
+        />
+    );
+}
+
+export default async function AdminEditCoursePage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
@@ -32,12 +45,9 @@ export default async function AdminEditCoursePage(props: { params: Promise<{ id:
                     </div>
                 </header>
                 
-                <CourseBuilder 
-                    course={course} 
-                    role="admin" 
-                    availableClassLevels={classLevels} 
-                    availableTutors={tutors} 
-                />
+                <Suspense fallback={<CourseBuilderSkeleton />}>
+                    <AdminEditCourseContent courseId={params.id} />
+                </Suspense>
             </div>
         </div>
     );

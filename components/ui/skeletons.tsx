@@ -56,54 +56,6 @@ export function CardGridSkeleton() {
     );
 }
 
-export function CourseDetailSkeleton() {
-    return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 pb-12">
-            {/* Header / Hero Section Skeleton */}
-            <div className="bg-white border-b border-slate-200">
-                <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
-                    {/* Thumbnail */}
-                    <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden bg-slate-200 animate-pulse flex-shrink-0"></div>
-                    
-                    {/* Course Info */}
-                    <div className="flex-1 w-full space-y-4">
-                        <div className="h-4 bg-slate-200 rounded w-32 animate-pulse mb-2"></div>
-                        <div className="h-8 bg-slate-200 rounded w-3/4 animate-pulse"></div>
-                        <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
-                        <div className="h-4 bg-slate-100 rounded w-5/6 animate-pulse"></div>
-                        
-                        <div className="pt-4 flex items-center gap-4">
-                            <div className="h-12 bg-slate-200 rounded w-40 animate-pulse"></div>
-                            <div className="h-10 bg-slate-100 rounded w-32 animate-pulse"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Kurikulum Skeleton */}
-            <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
-                <div className="h-6 bg-slate-200 rounded w-48 animate-pulse mb-6"></div>
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                            <div className="h-5 bg-slate-200 rounded w-1/3 animate-pulse"></div>
-                        </div>
-                        <div className="p-4 space-y-4">
-                            <div className="flex gap-4">
-                                <div className="h-10 w-10 bg-slate-100 rounded-full animate-pulse"></div>
-                                <div className="space-y-2 flex-1">
-                                    <div className="h-4 bg-slate-100 rounded w-1/2 animate-pulse"></div>
-                                    <div className="h-3 bg-slate-50 rounded w-1/4 animate-pulse"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 export function CurriculumSkeleton() {
     return (
         <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
@@ -146,5 +98,53 @@ export function LessonSkeleton() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export function CourseBuilderSkeleton() {
+    return (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="flex border-b px-6 py-4 space-x-8">
+                <div className="h-5 bg-slate-200 rounded w-32 animate-pulse"></div>
+                <div className="h-5 bg-slate-200 rounded w-32 animate-pulse"></div>
+                <div className="h-5 bg-slate-200 rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="p-6 space-y-6">
+                <div className="space-y-2">
+                    <div className="h-5 bg-slate-200 rounded w-48 animate-pulse"></div>
+                    <div className="h-10 bg-slate-100 rounded w-full animate-pulse border border-slate-200"></div>
+                </div>
+                <div className="space-y-2">
+                    <div className="h-5 bg-slate-200 rounded w-48 animate-pulse"></div>
+                    <div className="h-24 bg-slate-100 rounded w-full animate-pulse border border-slate-200"></div>
+                </div>
+                <div className="h-40 bg-slate-50 rounded w-full animate-pulse border border-slate-200"></div>
+            </div>
+        </div>
+    );
+}
+
+export function Spinner({ className = "w-4 h-4" }: { className?: string }) {
+    return (
+        <svg 
+            className={`animate-spin ${className}`} 
+            xmlns="http://www.w3.org/2000/svg" 
+            fill="none" 
+            viewBox="0 0 24 24"
+        >
+            <circle 
+                className="opacity-25" 
+                cx="12" 
+                cy="12" 
+                r="10" 
+                stroke="currentColor" 
+                strokeWidth="4"
+            ></circle>
+            <path 
+                className="opacity-75" 
+                fill="currentColor" 
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+        </svg>
     );
 }

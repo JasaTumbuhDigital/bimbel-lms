@@ -21,6 +21,7 @@ import {
 
 import SortableModuleItem from "./SortableModuleItem";
 import { reorderModulesAction, createModuleAction } from "@/lib/actions/module";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function ModulesTab({ course }: { course: any }) {
     const router = useRouter();
@@ -73,8 +74,12 @@ export default function ModulesTab({ course }: { course: any }) {
 
             const res = await createModuleAction(null, formData);
             if (res.success) {
+                if (res.data) {
+                    setModules((prev: any) => [...prev, { ...(res.data as any), lessons: [], quiz: null }]);
+                }
                 setNewModuleTitle("");
                 setIsAddingModule(false);
+                toast.success(res.message);
             } else {
                 toast.error(res.error || (res.fieldErrors ? JSON.stringify(res.fieldErrors) : "Error"));
             }
@@ -107,7 +112,9 @@ export default function ModulesTab({ course }: { course: any }) {
                         autoFocus
                         disabled={isPending}
                     />
-                    <button type="submit" disabled={isPending} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50">Simpan</button>
+                    <button type="submit" disabled={isPending} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                        {isPending ? <><Spinner /> Menyimpan...</> : "Simpan"}
+                    </button>
                     <button type="button" disabled={isPending} onClick={() => setIsAddingModule(false)} className="text-gray-600 hover:text-gray-900 px-3">Batal</button>
                 </form>
             )}

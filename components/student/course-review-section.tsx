@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Star } from "lucide-react";
 import { submitReviewAction, deleteReviewAction } from "@/lib/actions/review";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/skeletons";
 
 interface ReviewData {
     id: string;
@@ -35,6 +37,7 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
     const [hoveredRating, setHoveredRating] = useState(0);
     const [comment, setComment] = useState(studentReview?.comment || "");
     const [isEditing, setIsEditing] = useState(!studentReview);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Hitung rata-rata rating
     const totalReviews = reviews.length;
@@ -46,7 +49,7 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
         e.preventDefault();
         
         if (rating === 0) {
-            alert("Silakan berikan rating bintang terlebih dahulu.");
+            toast.warning("Silakan berikan rating bintang terlebih dahulu.");
             return;
         }
 
@@ -59,29 +62,29 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
             const result = await submitReviewAction(formData);
             
             if (!result.success) {
-                alert(result.error);
+                toast.error(result.error);
             } else {
+                toast.success("Ulasan berhasil disimpan!");
                 setIsEditing(false);
                 router.refresh(); // Refresh halaman agar ulasan baru muncul di daftar bawah
             }
         });
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (!studentReview?.id) return;
-        if (!confirm("Yakin ingin menghapus ulasanmu? Tindakan ini tidak bisa dibatalkan.")) return;
 
-        startTransition(async () => {
-            const result = await deleteReviewAction(studentReview.id);
-            if (!result.success) {
-                alert(result.error);
-            } else {
-                setRating(0);
-                setComment("");
-                setIsEditing(true); // Kembali ke mode form kosong
-                router.refresh();
-            }
-        });
+        const result = await deleteReviewAction(studentReview.id);
+        if (!result.success) {
+            toast.error(result.error);
+        } else {
+            toast.success("Ulasan berhasil dihapus!");
+            setRating(0);
+            setComment("");
+            setIsEditing(true); // Kembali ke mode form kosong
+            setShowDeleteConfirm(false);
+            router.refresh();
+        }
     };
 
     return (
@@ -156,9 +159,9 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
                                 <button
                                     type="submit"
                                     disabled={isPending || rating === 0}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 text-sm font-medium rounded-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    {isPending ? "Menyimpan..." : "Simpan Ulasan"}
+                                    {isPending ? <><Spinner /> Menyimpan...</> : "Simpan Ulasan"}
                                 </button>
                                 {studentReview && (
                                     <button
@@ -195,11 +198,11 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
                                     Edit Ulasan
                                 </button>
                                 <button
-                                    onClick={handleDelete}
+                                    onClick={() => setShowDeleteConfirm(true)}
                                     disabled={isPending}
                                     className="text-sm text-red-500 hover:text-red-600 font-medium disabled:opacity-50"
                                 >
-                                    {isPending ? "Menghapus..." : "Hapus Ulasan"}
+                                    Hapus Ulasan
                                 </button>
                             </div>
                         </div>
@@ -247,6 +250,46 @@ export function CourseReviewSection({ courseId, isEnrolled, studentReview, revie
                     ))}
                 </div>
             )}
+
+            {showDeleteConfirm && (
+                <ConfirmModal
+                    title="Hapus Ulasan"
+                    message="Yakin ingin menghapus ulasanmu? Tindakan ini tidak bisa dibatalkan."
+                    onConfirm={handleDelete}
+                    onClose={() => setShowDeleteConfirm(false)}
+                />
+            )}
+        </div>
+    );
+}
+
+// Sub-komponen Modal Konfirmasi
+function ConfirmModal({ title, message, onConfirm, onClose }: { title: string; message: string; onConfirm: () => Promise<void>; onClose: () => void }) {
+    const [isPending, setIsPending] = useState(false);
+
+    const handleConfirm = async () => {
+        setIsPending(true);
+        await onConfirm();
+        setIsPending(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-sm p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="font-semibold text-slate-900">{title}</h2>
+                    <button onClick={onClose} disabled={isPending} className="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+                </div>
+                <p className="text-sm text-slate-600">{message}</p>
+                <div className="flex justify-end gap-2 pt-2">
+                    <button onClick={onClose} disabled={isPending} className="text-sm px-4 py-1.5 border border-slate-200 rounded-md text-slate-600">
+                        Batal
+                    </button>
+                    <button onClick={handleConfirm} disabled={isPending} className="text-sm px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                        {isPending ? <><Spinner /> Menghapus...</> : "Hapus"}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

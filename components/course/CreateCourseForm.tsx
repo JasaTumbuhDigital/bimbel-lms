@@ -7,6 +7,7 @@ import { createCourseAction } from "@/lib/actions/course";
 import ThumbnailUpload from "@/components/ui/ThumbnailUpload";
 import { createClient } from "@/utils/supabase/client";
 import { institutionConfig } from "@/config/institution";
+import { Spinner } from "@/components/ui/skeletons";
 
 export default function CreateCourseForm({ role }: { role: "admin" | "tutor" }) {
     const router = useRouter();
@@ -94,9 +95,9 @@ export default function CreateCourseForm({ role }: { role: "admin" | "tutor" }) 
                 <button
                     type="submit"
                     disabled={isPending}
-                    className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md font-medium disabled:opacity-50"
+                    className="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md font-medium disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                    {isPending ? "Menyimpan..." : "Buat Kursus"}
+                    {isPending ? <><Spinner /> Menyimpan...</> : "Buat Kursus"}
                 </button>
             </div>
         </form>

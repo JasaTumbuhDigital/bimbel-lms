@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createUserAccountAction } from "@/lib/actions/user";
 import { ActionResult } from "@/types/action";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/skeletons";
 
 type ClassLevelOption = {
     id: string;
@@ -27,28 +29,17 @@ export default function CreateUserForm({
     useEffect(() => {
         if (state.success && formRef.current) {
             formRef.current.reset();
+            toast.success(state.message);
+        } else if (state.error) {
+            toast.error(state.error);
         }
-    }, [state.success]);
+    }, [state]);
 
     return (
         <section className="bg-white border border-slate-200 rounded-lg p-6 space-y-4 max-w-xl">
-            <h2 className="text-base font-semibold text-slate-900">
+            <h2 className="text-base font-semibold text-slate-900 mb-4">
                 Formulir Registrasi Pengguna Baru
             </h2>
-
-            {/* Alert Error General */}
-            {state.error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
-                    {state.error}
-                </div>
-            )}
-
-            {/* Alert Success */}
-            {state.success && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-                    {state.message}
-                </div>
-            )}
 
             <form ref={formRef} action={formAction} className="space-y-4">
                 {/* Pilihan Role */}
@@ -162,9 +153,9 @@ export default function CreateUserForm({
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {isPending ? "Menyimpan Data..." : "Buat Akun Pengguna"}
+                        {isPending ? <><Spinner /> Menyimpan Data...</> : "Buat Akun Pengguna"}
                     </button>
                     <p className="text-xs text-slate-500 mt-3 text-center">
                         Catatan: Password default akan dibuat otomatis, pengguna wajib menggantinya saat login pertama kali.
