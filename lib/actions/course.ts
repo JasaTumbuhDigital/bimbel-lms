@@ -86,7 +86,7 @@ export async function createCourseAction(
 export async function archiveCourseAction(courseId: string): Promise<ActionResult> {
     const accessResult = await verifyCourseAccess(courseId, true); // true = requires Owner
     if (!accessResult.success) {
-        return { success: false, error: accessResult.error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat menghapus kursus." };
+        return { success: false, error: accessResult.error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat mengarsipkan kursus." };
     }
 
     try {
@@ -99,12 +99,41 @@ export async function archiveCourseAction(courseId: string): Promise<ActionResul
         });
 
         revalidatePath("/admin/courses");
+        revalidatePath("/tutor/courses");
         return { success: true, message: "Kursus berhasil diarsipkan." };
     } catch (error) {
         console.error("Error archiveCourseAction:", error);
         return { success: false, error: "Gagal mengarsipkan kursus." };
     }
 }
+
+/**
+ * 3b. Action Pulihkan Kursus dari Arsip (Admin & Tutor Utama)
+ */
+export async function unarchiveCourseAction(courseId: string): Promise<ActionResult> {
+    const accessResult = await verifyCourseAccess(courseId, true); // true = requires Owner
+    if (!accessResult.success) {
+        return { success: false, error: accessResult.error || "Akses ditolak. Hanya Admin dan Tutor Utama yang dapat memulihkan kursus." };
+    }
+
+    try {
+        const course = await prisma.course.findUnique({ where: { id: courseId } });
+        if (!course) return { success: false, error: "Kursus tidak ditemukan." };
+
+        await prisma.course.update({
+            where: { id: courseId },
+            data: { isArchived: false },
+        });
+
+        revalidatePath("/admin/courses");
+        revalidatePath("/tutor/courses");
+        return { success: true, message: "Kursus berhasil dipulihkan dari arsip." };
+    } catch (error) {
+        console.error("Error unarchiveCourseAction:", error);
+        return { success: false, error: "Gagal memulihkan kursus." };
+    }
+}
+
 
 /**
  * 4. Action Update Informasi Kursus (Admin & Tutor)
@@ -151,8 +180,6 @@ export async function updateCourseAction(
         return { success: false, error: "Gagal memperbarui akses kursus." };
     }
 }
-
-
 
 /**
  * 5. Action Update Akses Kursus (Admin Only)
@@ -224,6 +251,7 @@ export async function updateCourseAccessAction(
         });
 
         revalidatePath(`/admin/courses/${courseId}/edit`);
+        revalidatePath(`/tutor/courses/${courseId}/edit`)
         return { success: true, message: "Pengaturan akses berhasil diperbarui." };
     } catch (error) {
         console.error("Failed to update course access:", error);

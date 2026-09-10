@@ -1,11 +1,13 @@
 # Software Design Document (SDD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 1.4
+**Versi:** 1.5
 **Tanggal:** 2 September 2026
 **Terkait dokumen:** PRD.md (v2.4)
 **Cakupan dokumen:** Fokus desain **Tier 1 (Base MVP)**. Tier 2 dibahas sebagai *extension notes* di tiap section relevan (bukan didesain detail) — akan didetailkan ulang sebagai revisi SDD terpisah saat Tier 2 mulai dikerjakan, sesuai fase di Implementation Plan.
 
+> **Ringkasan perubahan v1.5:** Perombakan sisi tutor & course — pindah tingkatan siswa kembali murni hak admin (revert), Course Detail jadi 1 komponen shared admin/tutor dengan mode edit/preview + daftar siswa enrolled & reviews per-course. Detail lengkap: TSD-Course-Content.md v1.6, TSD-Auth-ClassLevel.md v1.2, TSD-Tutor-Dashboard.md v1.1.
+>
 > **Ringkasan perubahan v1.4:** `must_change_password` dipindah dari `student_profiles` ke `users` (berlaku semua role) — konsekuensi dari `createStudentAccount` yang digeneralisasi jadi `createUserAccount` (role: student/tutor/admin) di TSD-Auth-Account-Management.md v1.1. Detail lengkap & alasan: TSD-Auth-Account-Management.md v1.1 §3.1, TSD-Admin-Dashboard.md v1.1.
 >
 > **Ringkasan perubahan v1.3:** Relasi Quiz dipindah dari Lesson ke **Module** (1:1, sejajar dengan Lesson sebagai sub-materi, sesuai bahasa asli FR-7). Kelulusan kuis dipertegas **murni informasional** — tidak lagi mengisi `lesson_progress` secara otomatis seperti disebut di v1.2. Detail lengkap: TSD-Quiz.md v3.0.
@@ -377,9 +379,9 @@ Pola Server Actions untuk domain lain (live class, Q&A, sertifikat) kemungkinan 
 | Modul | Tanggung Jawab | Dependensi Utama |
 |---|---|---|
 | **Auth Module** | Login, logout, session management, alur admin-created account, ganti password wajib, reset password | Supabase Auth, Middleware |
-| **Access Control Middleware** | Membaca role dari session, membatasi akses route sesuai role (siswa/tutor/admin), redirect ke halaman Unauthorized jika akses tidak sah. Untuk tutor, tidak cukup cek role saja — juga membatasi *data* yang boleh diakses ke kursus yang dia ampu (lihat FR-41), bukan hanya membatasi *halaman* | Supabase Auth session, Course & Tutor Assignment Module |
-| **Class Level Module** | CRUD kategori tingkatan, penetapan tingkatan default saat akun dibuat, perpindahan siswa antar tingkatan, helper query filter akses kursus berbasis tingkatan (many-to-many + flag `visible_to_all_levels`, dipakai ulang oleh Course Module) | Prisma, Course Module (konsumen helper) |
-| **Course & Content Module** | CRUD kursus/modul/lesson, filter tampilan kursus sesuai tingkatan siswa, embed video YouTube, upload & preview dokumen. Untuk tutor, seluruh operasi CRUD kursus divalidasi terhadap keanggotaan di `course_tutors` (hanya kursus miliknya) | Prisma, Supabase Storage, Class Level Module, Tutor Assignment Module |
+| **Access Control Middleware** | Membaca role dari session, membatasi akses route sesuai role (siswa/tutor/admin), redirect ke halaman Unauthorized jika akses tidak sah. Untuk tutor, membatasi *aksi tulis* (edit/publish/kelola siswa) ke kursus yang dia ampu (lihat FR-41) — tapi tutor tetap boleh **membaca** semua kursus institusi lewat tab "Kursus Lain" (read-only preview, TSD-Course-Content.md v1.6) | Supabase Auth session, Course & Tutor Assignment Module |
+| **Course & Content Module** | CRUD kursus/modul/lesson, filter tampilan kursus sesuai tingkatan siswa, embed video YouTube, upload & preview dokumen. Course Detail 1 komponen shared untuk admin & tutor — mode edit divalidasi terhadap keanggotaan di `course_tutors`, mode read-only untuk tutor lain (v1.6). Termasuk daftar siswa enrolled per-course (khusus akses edit) & reviews (untuk semua) | Prisma, Supabase Storage, Class Level Module, Tutor Assignment Module, Student Dashboard Module (reuse `getReviewsForCourse`) |
+| **Class Level Module** | CRUD kategori tingkatan, penetapan tingkatan default saat akun dibuat, perpindahan siswa antar tingkatan (**murni hak admin**, tidak didelegasikan ke tutor — TSD-Auth-ClassLevel.md v1.2), helper query filter akses kursus berbasis tingkatan (many-to-many + flag `visible_to_all_levels`, dipakai ulang oleh Course Module) | Prisma, Course Module (konsumen helper) |
 | **Tutor Assignment Module** | Assign/unassign tutor ke kursus (many-to-many via `course_tutors`), jadi sumber kebenaran tunggal untuk scoping akses tutor (dipakai Middleware & Course Module) — hanya bisa dioperasikan oleh admin (FR-40) | Prisma |
 | **Progress Tracking Module** | Simpan/hapus status "selesai" per lesson per siswa (manual, Tier 1) | Prisma |
 | **Quiz Module** | Builder kuis per modul (tutor/admin), pengerjaan kuis (siswa), penilaian otomatis vs passing grade — murni badge informasional, tidak menggerbang modul lain | Prisma |
@@ -615,4 +617,4 @@ Sudah dibahas detail alasannya di PRD §5.1a dan Implementation Plan §2 — dic
 
 ---
 
-*Dokumen ini adalah turunan teknis dari PRD.md v2.4. Perubahan pada PRD (terutama scope Tier 1/Tier 2 atau FR terkait) harus tercermin di revisi SDD ini. TSD (Technical Spec Document) per fitur akan disusun terpisah, merujuk ke component breakdown (§5) dan data model (§3) di dokumen ini.*
+*Dokumen ini adalah turunan teknis dari PRD.md v2.0. Perubahan pada PRD (terutama scope Tier 1/Tier 2 atau FR terkait) harus tercermin di revisi SDD ini. TSD (Technical Spec Document) per fitur akan disusun terpisah, merujuk ke component breakdown (§5) dan data model (§3) di dokumen ini.*

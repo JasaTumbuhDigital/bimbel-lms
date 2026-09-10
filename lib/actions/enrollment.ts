@@ -25,19 +25,7 @@ export async function enrollCourseAction(courseId: string) {
             return { success: false, error: "Kursus tidak ditemukan atau belum dipublikasikan." };
         }
 
-        // Cek kelayakan tingkatan kelas
-        const isEligible =
-            course.visibleToAllLevels ||
-            course.classLevels.some((cl) => cl.classLevelId === studentClassLevelId);
-
-        if (!isEligible) {
-            return {
-                success: false,
-                error: "Maaf, kursus ini tidak dapat didaftar oleh tingkatan kelas kamu.",
-            };
-        }
-
-        // Cek apakah sudah ter-enroll sebelumnya
+        // 1. Cek apakah sudah ter-enroll sebelumnya (jika sudah terdaftar, izinkan/sukseskan tanpa memblokir tingkatan kelas)
         const existing = await prisma.enrollment.findUnique({
             where: {
                 studentId_courseId: {
@@ -49,6 +37,18 @@ export async function enrollCourseAction(courseId: string) {
 
         if (existing) {
             return { success: true, message: "Kamu sudah terdaftar di kursus ini." };
+        }
+
+        // 2. Cek kelayakan tingkatan kelas untuk enrollment baru
+        const isEligible =
+            course.visibleToAllLevels ||
+            course.classLevels.some((cl) => cl.classLevelId === studentClassLevelId);
+
+        if (!isEligible) {
+            return {
+                success: false,
+                error: "Maaf, kursus ini tidak dapat didaftar oleh tingkatan kelas kamu.",
+            };
         }
 
         await prisma.$transaction([
