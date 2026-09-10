@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import {
     adminEnrollStudentsAction,
@@ -38,6 +38,11 @@ export default function CourseEnrollmentTab({
     initialData: EnrollmentData;
 }) {
     const [data, setData] = useState<EnrollmentData>(initialData);
+
+    // Sync data ketika initialData dari server berubah (akibat revalidatePath)
+    useEffect(() => {
+        setData(initialData);
+    }, [initialData]);
 
     // --- Bulk Enroll by Class ---
     const [selectedBulkClassIds, setSelectedBulkClassIds] = useState<string[]>([]);
@@ -101,8 +106,7 @@ export default function CourseEnrollmentTab({
             const res = await adminBulkEnrollByClassAction(data.courseId, selectedBulkClassIds);
             if (res.success) {
                 toast.success(res.message);
-                // Reload data setelah enroll berhasil
-                window.location.reload();
+                setSelectedBulkClassIds([]);
             } else {
                 toast.error(res.error);
             }
@@ -119,7 +123,7 @@ export default function CourseEnrollmentTab({
             const res = await adminEnrollStudentsAction(data.courseId, selectedStudentIds);
             if (res.success) {
                 toast.success(res.message);
-                window.location.reload();
+                setSelectedStudentIds([]);
             } else {
                 toast.error(res.error);
             }
