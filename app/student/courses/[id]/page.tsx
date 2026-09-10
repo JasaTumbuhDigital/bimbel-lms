@@ -46,7 +46,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
             studentReview = await getStudentReviewForCourse(courseBasic.id);
         }
     }
-    
+
     const fullImageUrl = getPublicUrl(courseBasic.thumbnailUrl || null);
 
     return (
@@ -56,7 +56,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                 <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
 
                     {/* Thumbnail */}
-                    <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 flex-shrink-0">
+                    <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 shrink-0">
                         {fullImageUrl ? (
                             <Image
                                 src={fullImageUrl}
@@ -84,6 +84,13 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                         <p className="text-slate-600 leading-relaxed text-sm md:text-base">
                             {courseBasic.description || "Tidak ada deskripsi kursus yang tersedia."}
                         </p>
+
+                        <div className="text-xs text-slate-500 font-medium">
+                            Dibuat oleh:{" "}
+                            <span className="text-slate-700 font-semibold">
+                                {courseBasic.creator?.name || "Tutor Bimbel"}
+                            </span>
+                        </div>
 
                         <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
                             {!isEnrolled ? (
@@ -118,29 +125,38 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
 
 async function CourseProgress({ courseId, isEnrolled }: { courseId: string, isEnrolled: boolean }) {
     if (!isEnrolled) return null;
-    
-    // Kita butuh getCourseById untuk menghitung progress lessons
+
+    // Kita butuh getCourseById untuk menghitung progress materi & kuis
     const course = await getCourseById(courseId);
     if (!course) return null;
 
     let firstLessonId: string | null = null;
-    let totalLessons = 0;
-    let completedLessons = 0;
+    let totalItems = 0;
+    let completedItems = 0;
 
     course.modules.forEach((module) => {
-        totalLessons += module.lessons.length;
+        // 1. Hitung materi (lessons)
+        totalItems += module.lessons.length;
         if (!firstLessonId && module.lessons.length > 0) {
             firstLessonId = module.lessons[0].id;
         }
         module.lessons.forEach((lesson) => {
             if ((lesson as any).progress && (lesson as any).progress.length > 0 && (lesson as any).progress[0].isCompleted) {
-                completedLessons++;
+                completedItems++;
             }
         });
+
+        // 2. Hitung kuis modul jika ada
+        if (module.quiz) {
+            totalItems += 1;
+            if (module.quiz.progress && module.quiz.progress.length > 0 && module.quiz.progress[0].isPassed) {
+                completedItems++;
+            }
+        }
     });
 
-    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-    const isCourseCompleted = totalLessons > 0 && completedLessons === totalLessons;
+    const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+    const isCourseCompleted = totalItems > 0 && completedItems === totalItems;
 
     return (
         <>
@@ -154,7 +170,7 @@ async function CourseProgress({ courseId, isEnrolled }: { courseId: string, isEn
 
                 <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-slate-700">Progres Belajar</span>
-                    <span className="text-slate-500">{completedLessons} / {totalLessons} Materi ({progressPercentage}%)</span>
+                    <span className="text-slate-500">{completedItems} / {totalItems} Materi & Kuis ({progressPercentage}%)</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
                     <div
@@ -165,14 +181,13 @@ async function CourseProgress({ courseId, isEnrolled }: { courseId: string, isEn
                 {isCourseCompleted && (
                     <p className="text-sm text-green-600 font-medium mt-2 flex items-center gap-1">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        Selamat! Anda telah menyelesaikan seluruh materi di kursus ini.
+                        Selamat! Anda telah menyelesaikan seluruh materi dan kuis di kursus ini.
                     </p>
                 )}
             </div>
         </>
     );
 }
-
 
 async function CourseCurriculum({ courseId, isEnrolled, studentReview }: { courseId: string, isEnrolled: boolean, studentReview: any }) {
     const course = await getCourseById(courseId);
@@ -278,7 +293,7 @@ async function CourseCurriculum({ courseId, isEnrolled, studentReview }: { cours
 
             {/* Bagian Ulasan (Review) */}
             <div className="max-w-3xl mx-auto px-6 pb-12">
-                <CourseReviewSection 
+                <CourseReviewSection
                     courseId={course.id}
                     isEnrolled={isEnrolled}
                     studentReview={studentReview}

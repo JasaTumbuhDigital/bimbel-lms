@@ -36,8 +36,9 @@ export default function TutorDashboardPage() {
                     </Link>
 
                     {/* Card 2: Eksplorasi Kursus */}
+                    {/* Card 2: Eksplorasi Kursus */}
                     <Link
-                        href="/tutor/explore"
+                        href="/tutor/courses?tab=others"
                         className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
                     >
                         <h2 className="text-base font-semibold text-slate-900 mb-1">

@@ -4,25 +4,35 @@ import { useState } from "react";
 import CourseInfoTab from "./CourseInfoTab";
 import ModulesTab from "./ModulesTab";
 import CourseAccessTab from "./CourseAccessTab";
+import CourseEnrollmentTab from "./CourseEnrollmentTab";
 import { Course, ClassLevel, TutorProfile, User } from "@prisma/client";
 
 type TutorWithUser = TutorProfile & { user: User };
+
+type EnrollmentData = {
+    courseId: string;
+    enrolledStudents: any[];
+    unenrolledStudents: any[];
+    classLevels: any[];
+} | null;
 
 export default function CourseBuilder({
     course,
     role,
     isOwner = false,
     availableClassLevels = [],
-    availableTutors = []
+    availableTutors = [],
+    enrollmentData = null,
 }: {
     course: any,
     role: "admin" | "tutor",
     isOwner?: boolean,
     availableClassLevels?: ClassLevel[] | { id: string, name: string }[],
     availableTutors?: TutorWithUser[] | { id: string, user: { id: string, name: string } }[]
+    enrollmentData?: EnrollmentData,
 }) {
     const hasFullAccess = role === "admin" || isOwner;
-    const [activeTab, setActiveTab] = useState<"info" | "modules" | "settings">("modules");
+    const [activeTab, setActiveTab] = useState<"info" | "modules" | "settings" | "enrollment">("modules");
 
     return (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -50,6 +60,17 @@ export default function CourseBuilder({
                         Pengaturan Akses
                     </button>
                 )}
+                {hasFullAccess && enrollmentData && (
+                    <button
+                        onClick={() => setActiveTab("enrollment")}
+                        className={`px-6 py-3 font-medium text-sm whitespace-nowrap flex items-center gap-1.5 ${activeTab === "enrollment" ? "border-b-2 border-green-600 text-green-600" : "text-gray-600 hover:text-gray-900"}`}
+                    >
+                        Peserta
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${activeTab === "enrollment" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                            {enrollmentData.enrolledStudents.length}
+                        </span>
+                    </button>
+                )}
             </div>
 
             <div className="p-6">
@@ -67,6 +88,10 @@ export default function CourseBuilder({
                         availableClassLevels={availableClassLevels}
                         availableTutors={availableTutors}
                     />
+                )}
+
+                {activeTab === "enrollment" && hasFullAccess && enrollmentData && (
+                    <CourseEnrollmentTab initialData={enrollmentData} />
                 )}
             </div>
         </div>

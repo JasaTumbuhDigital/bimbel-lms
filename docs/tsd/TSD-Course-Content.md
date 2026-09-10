@@ -1,11 +1,13 @@
 # Technical Spec Document (TSD)
 ## Fitur: Course & Content Module
 
-**Versi:** 1.5
+**Versi:** 1.6
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6, Fase 2) · TSD-Auth-ClassLevel.md (v1.1, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency ringan satu arah)
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.5) · Implementation-Plan.md (v2.9, Fase 2) · TSD-Auth-ClassLevel.md (v1.2, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency dua arah — lihat A7) · TSD-Tutor-Dashboard.md (v1.1, dependency erat)
 **Scope Implementation Plan:** Fase 2 (Modul Kursus & Materi)
 
+> **Ringkasan perubahan v1.6 (perombakan besar sisi tutor):** Halaman `/tutor/courses` (scoped, editable) dan `/tutor/explore` (read-only, yang sebenarnya belum pernah didetailkan di dokumen manapun) **digabung jadi satu halaman** dengan 2 tab: "Kursus Saya" & "Kursus Lain" (§8.5). Course Detail sekarang 1 komponen yang sama untuk admin & tutor, mode edit/preview mengikuti hak akses (§8.2). Ditambahkan: section **siswa enrolled** per course (khusus yang punya akses edit, §5.5) dan section **reviews** (reuse `getReviewsForCourse` dari TSD-Student-Dashboard, tampil untuk semua, §5.6). Lihat A5-A8 di §1.4.
+>
 > **Ringkasan perubahan v1.5:** `enrollInCourse` (§5.2b) dapat 1 langkah tambahan kecil — bersihkan `wishlists` untuk course yang baru di-enroll (lihat TSD-Student-Dashboard.md D4, Fase 4). Tidak ada perubahan lain.
 >
 > **Ringkasan perubahan v1.4:** Revert perubahan v1.3 — kuis dipindah relasinya dari Lesson ke **Module** (lihat TSD-Quiz.md v3.0), dan sifatnya murni informational (badge status, tidak menggerbang apa pun). Karena itu, `markLessonComplete`/`unmarkLessonComplete` (§7.1) **kembali ke logic aslinya sepenuhnya manual**, tanpa guard atau ketergantungan ke kuis. Modul ini sekarang hanya perlu tahu bahwa Course Builder & halaman detail kursus punya 1 elemen UI tambahan (badge kuis modul) yang datanya sepenuhnya dikelola TSD-Quiz.md — bukan lagi dependency dua arah.
@@ -47,6 +49,22 @@ Modul ini **bergantung penuh** pada TSD-Auth-ClassLevel.md — khususnya helper 
 **A3 — Soft-delete untuk kursus:** `deleteCourse` tidak menghapus row secara permanen (mencegah orphan data di `enrollments`, `lesson_progress`, dst), melainkan set `isArchived = true`. Kursus arsip disembunyikan dari semua listing kecuali tampilan khusus admin.
 
 **A4 — Preview dokumen pakai `@cyntler/react-doc-viewer` di Tier 1:** FR-10 (upload dokumen PDF/PPT + preview di browser) **tetap dibangun di Tier 1**, dengan pendekatan menggunakan library `@cyntler/react-doc-viewer` (§6.4). Ini memungkinkan render secara native di komponen React tanpa mengirim file ke pihak ketiga seperti Google.
+
+**A5 — Halaman kelola course tutor & halaman "explore" digabung jadi satu, dengan tab (v1.6):** Sebelumnya ada 2 konsep terpisah: `/tutor/courses` (scoped ke course miliknya, editable) dan `/tutor/explore` (read-only, untuk review course tutor lain) — tapi yang kedua **belum pernah benar-benar didetailkan** di dokumen manapun sebelum ini, cuma disebut namanya di PRD/Implementation-Plan. Sekarang digabung jadi **1 halaman** (`/tutor/courses`, §8.5) dengan 2 tab:
+- **"Kursus Saya"** — course yang ada di `course_tutors` milik tutor ini, kartu-nya bisa langsung masuk ke mode edit (Course Builder, §8.2)
+- **"Kursus Lain"** — semua course lain di institusi (exclusive dari tab pertama, tidak duplikat), read-only preview untuk keperluan saling koreksi antar tutor (nilai yang tetap dipertahankan dari FR-41 lama)
+
+Dari kedua tab, klik course masuk ke **1 komponen Course Detail yang sama** (bukan route/komponen terpisah untuk "builder" vs "explore") — kalau tutor punya akses edit (ada di `course_tutors` course itu), komponen ini render dalam mode edit penuh; kalau tidak, render read-only. Admin juga memakai komponen yang sama saat masuk ke detail course dari `/admin/courses` — bedanya admin selalu dapat mode edit penuh + section admin-only (tingkatan, tutor pengampu) yang tidak pernah muncul di sisi tutor.
+
+Tutor juga bisa **langsung membuat course baru** dari halaman ini (tombol "+ Buat Kursus Baru", memanggil `createCourse` §4.1 yang sebenarnya sudah mendukung pemanggilan oleh tutor sejak awal — cuma belum ada entry point UI-nya yang jelas).
+
+> **Pertimbangan yang TIDAK diadopsi:** Sempat dipertimbangkan membatasi admin supaya tidak bisa `createCourse`/`archiveCourseAction` sama sekali (biar admin fokus ke sisi operasional/institusi, bukan akademik). **Diputuskan tetap membolehkan admin penuh** — admin sebagai fallback/oversight universal itu pola yang konsisten dipakai di seluruh sistem ini (lihat juga TSD-Admin-Dashboard.md), dan membatasi admin di sini akan jadi pengecualian yang aneh sendiri tanpa manfaat jelas.
+
+**A6 — Course Detail menampilkan daftar siswa enrolled, HANYA untuk yang punya akses edit (v1.6):** Section baru "Siswa Enrolled" (nama, email, tingkatan, ringkasan progress — §5.5) muncul di Course Detail **hanya kalau** pemanggil admin atau ada di `course_tutors` course tsb. Untuk tutor yang cuma preview (tab "Kursus Lain"), section ini **disembunyikan total** (query-nya bahkan tidak dijalankan di server, bukan cuma disembunyikan di UI) — data pribadi siswa (nama, email) tidak semestinya bocor ke tutor yang tidak mengampu course itu, biarpun struktur/konten course-nya sendiri memang sengaja terbuka untuk saling review.
+
+**A7 — Reviews course ditampilkan juga di Course Detail versi tutor/admin (v1.6):** Reuse `getReviewsForCourse` (TSD-Student-Dashboard.md §4.3.3) — ditampilkan ke **semua** yang bisa akses Course Detail, termasuk tutor yang cuma preview, karena review memang sudah didesain publik dalam aplikasi (D5, TSD-Student-Dashboard.md). Ini menciptakan dependency baru **dari dokumen ini ke TSD-Student-Dashboard.md** (sebelumnya cuma satu arah sebaliknya) — dicatat di §10.
+
+**A8 — Tutor Utama vs Co-Tutor TETAP tidak dibedakan untuk hak edit (tidak berubah dari v1.0):** Ditegaskan lagi di sini karena sempat jadi pertanyaan terpisah — permission `canManageCourse` (§6.1) memang sengaja tidak membedakan keduanya (siapa pun anggota `course_tutors` boleh edit modul/materi), konsisten dengan pola yang sudah ada sejak awal.
 
 ---
 
@@ -271,7 +289,7 @@ USING (
   OR EXISTS (SELECT 1 FROM student_profiles sp JOIN users u ON u.id = sp.user_id WHERE sp.id = enrollments.student_id AND u.auth_id = auth.uid())
 );
 
--- INSERT: sistem atas nama siswa yang login melalui tombol Enroll, atau admin
+-- INSERT: sistem (via Server Action lazy-enroll) atas nama siswa yang login, atau admin
 CREATE POLICY enrollments_insert ON enrollments FOR INSERT
 WITH CHECK (
   EXISTS (SELECT 1 FROM student_profiles sp JOIN users u ON u.id = sp.user_id WHERE sp.id = enrollments.student_id AND u.auth_id = auth.uid())
@@ -504,23 +522,28 @@ const enrollSchema = z.object({ courseId: z.string().uuid() });
 3. **(v1.5, ditambahkan untuk TSD-Student-Dashboard.md D4)** Bersihkan wishlist kalau course ini pernah di-wishlist siswa: `prisma.wishlist.deleteMany({ where: { studentId, courseId } })` — aman dipanggil walau tidak ada baris yang cocok. Dilakukan dalam transaksi yang sama dengan poin 2.
 4. Return `{ success: true }` — client re-fetch `getCourseDetailForStudent` setelah ini untuk dapat data full (§5.2)
 
-### 5.3 `getCourseListForTutor`
+### 5.3 `getMyCoursesForTutor` / `getOtherCoursesForTutor` (v1.6, menggantikan `getCourseListForTutor`)
 
 **FR terkait:** FR-41
 
 ```ts
-async function getCourseListForTutor(tutorProfileId: string) {
+// Tab "Kursus Saya" — scoped, editable
+async function getMyCoursesForTutor(tutorProfileId: string) {
   return prisma.course.findMany({
-    where: {
-      isArchived: false,
-      // Tutor dapat melihat semua list kursus, jadi filter berdasarkan tutorProfileId dihilangkan.
-      // (FR-41 yang baru)
-    },
+    where: { isArchived: false, courseTutors: { some: { tutorProfileId } } },
+    include: { modules: true, _count: { select: { enrollments: true } } },
+  });
+}
+
+// Tab "Kursus Lain" — read-only, exclusive dari yang di atas (tidak duplikat antar tab)
+async function getOtherCoursesForTutor(tutorProfileId: string) {
+  return prisma.course.findMany({
+    where: { isArchived: false, courseTutors: { none: { tutorProfileId } } },
     include: { modules: true },
   });
 }
 ```
-> **Catatan tegas:** Fungsi ini **tidak menerima parameter opsional "lihat semua"** dalam bentuk apa pun. Kalau di masa depan admin butuh "melihat sebagai tutor tertentu" (impersonation untuk debugging), itu harus jadi fungsi terpisah dengan audit log eksplisit — bukan menambah flag di fungsi ini, supaya tidak ada celah tutor lain bisa memanfaatkan.
+> **Catatan tegas (dipertahankan dari versi sebelumnya):** Sengaja **2 fungsi terpisah**, bukan 1 fungsi dengan parameter boolean "lihat semua" — supaya tidak ada satu titik yang bisa disalahgunakan untuk bikin tutor lihat lebih dari yang seharusnya. Kalau nanti admin butuh "melihat sebagai tutor tertentu" (impersonation untuk debugging), itu harus jadi fungsi terpisah lagi dengan audit log eksplisit.
 
 ### 5.4 `getCourseListForAdmin`
 
@@ -532,6 +555,73 @@ async function getCourseListForAdmin(filters?: { isArchived?: boolean }) {
   });
 }
 ```
+
+### 5.5 `getCourseDetailForManagement` (v1.6, query terpadu untuk Course Detail admin & tutor)
+
+**FR terkait:** FR-30, FR-41
+
+**Alur logika:**
+```ts
+async function getCourseDetailForManagement(courseId: string, currentUser: { role: Role; tutorProfileId?: string }) {
+  const hasEditAccess =
+    currentUser.role === "admin" ||
+    (await prisma.courseTutor.findFirst({
+      where: { courseId, tutorProfileId: currentUser.tutorProfileId },
+    })) !== null;
+
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    include: {
+      modules: { include: { lessons: true, quiz: true }, orderBy: { sortOrder: "asc" } },
+      classLevels: { include: { classLevel: true } }, // selalu di-include; UI cuma render section-nya kalau role === admin
+      tutors: { include: { tutorProfile: { include: { user: true } } } }, // sama, UI-gated ke admin
+    },
+  });
+
+  const enrolledStudents = hasEditAccess
+    ? await getEnrolledStudentsForCourse(courseId) // §5.5b — TIDAK dipanggil sama sekali kalau !hasEditAccess (A6)
+    : null;
+
+  const { reviews, aggregate } = await getReviewsForCourse(courseId); // §5.6, selalu dipanggil (A7)
+
+  return { course, hasEditAccess, enrolledStudents, reviews, aggregate };
+}
+```
+**Catatan penting (A6):** `enrolledStudents` **tidak pernah di-query** kalau `hasEditAccess === false` — bukan sekadar "di-null-kan sebelum dikirim ke client", tapi query-nya memang tidak pernah dijalankan. Ini mencegah kebocoran data lewat inspeksi response API oleh tutor yang iseng, bukan cuma mengandalkan UI untuk menyembunyikan.
+
+### 5.5b `getEnrolledStudentsForCourse` (helper, dipanggil dari §5.5)
+
+```ts
+async function getEnrolledStudentsForCourse(courseId: string) {
+  const enrollments = await prisma.enrollment.findMany({
+    where: { courseId },
+    include: { student: { include: { user: { select: { name: true, email: true } }, classLevel: { select: { name: true } } } } },
+  });
+
+  const lessonIds = (await prisma.lesson.findMany({ where: { module: { courseId } }, select: { id: true } })).map((l) => l.id);
+  const completedByStudent = await prisma.lessonProgress.groupBy({
+    by: ["studentId"],
+    where: { lessonId: { in: lessonIds }, isCompleted: true },
+    _count: true,
+  });
+  const completedMap = new Map(completedByStudent.map((c) => [c.studentId, c._count]));
+
+  return enrollments.map((e) => ({
+    studentId: e.studentId,
+    name: e.student.user.name,
+    email: e.student.user.email,
+    classLevel: e.student.classLevel.name,
+    progress: lessonIds.length > 0 ? `${completedMap.get(e.studentId) ?? 0}/${lessonIds.length}` : "-",
+  }));
+}
+```
+Pola perhitungan progress di sini **sama persis** dengan yang dipakai TSD-Student-Dashboard.md §4.1 (total lesson vs completed), cuma di sini per-course untuk 1 course tertentu, bukan agregat lintas semua course siswa.
+
+### 5.6 `getReviewsForCourse` (reuse dari TSD-Student-Dashboard.md §4.3.3)
+
+**FR terkait:** FR-16 (dipakai ulang, bukan didefinisikan ulang)
+
+Fungsi ini **didefinisikan kanonik di TSD-Student-Dashboard.md §4.3.3** — dokumen ini hanya memanggilnya dari §5.5. Lihat dokumen tersebut untuk detail implementasi (`_avg`, `_count`, list review + nama siswa). Tidak diduplikasi di sini supaya tidak ada 2 sumber kebenaran yang bisa tidak sinkron.
 
 ---
 
@@ -675,16 +765,30 @@ const markLessonSchema = z.object({
 ## 8. UI Requirements
 
 ### 8.1 Admin — `/admin/courses`
-- List semua kursus (published + draft, exclude archived by default, toggle filter arsip)
+- List semua kursus (published + draft, exclude archived by default, toggle filter arsip), dari `getCourseListForAdmin`
 - Kolom: judul, status (draft/published), jumlah tingkatan terkait / "Semua Tingkatan", jumlah tutor pengampu
-- Tombol "Arsipkan" per row (memanggil `deleteCourse`, dengan dialog konfirmasi)
+- Tombol "Arsipkan" per row (memanggil `archiveCourseAction`, dengan dialog konfirmasi)
+- Klik row → masuk ke **Course Detail** (§8.2) yang sama dipakai tutor, cuma admin selalu dapat mode edit penuh + section admin-only
 
-### 8.2 Admin/Tutor — `/[role]/courses/[id]/edit` (Course Builder)
-- Form info dasar kursus (title, description, thumbnail)
-- **Section tingkatan** (khusus admin — tutor tidak melihat/mengedit section ini sesuai FR-40 hak admin): multi-select checkbox daftar `class_levels` + toggle terpisah "Berlaku untuk Semua Tingkatan" (kalau toggle ini aktif, multi-select checkbox di-disable secara visual)
-- **Section tutor pengampu** (khusus admin): multi-select tutor dari daftar `tutor_profiles`, dengan tag/chip yang bisa dihapus (unassign)
-- **Section modul & lesson** (admin & tutor pemilik): drag-and-drop reorder (memanggil `reorderModules`/`reorderLessons`), tombol tambah modul/lesson — form lesson punya pilihan tipe konten (Video atau Dokumen); jika Video, field URL YouTube; jika Dokumen, komponen upload file (memanggil `uploadDocument`, §6.3). Tiap modul juga punya slot **"Kelola Kuis Modul"** di bagian bawah daftar lesson-nya — detail builder & data sepenuhnya di TSD-Quiz.md, dokumen ini hanya menyediakan slot UI-nya
-- Tombol "Publish" — jika validasi §4.3 gagal, tampilkan pesan error tepat di section tingkatan (bukan toast generik), supaya admin langsung tahu apa yang perlu dilengkapi
+### 8.2 Course Detail — `/[role]/courses/[id]` (v1.6, 1 komponen shared untuk admin & tutor)
+
+> **Perubahan v1.6:** Sebelumnya ini disebut "Course Builder" dan diakses lewat route `/edit` terpisah. Sekarang ini **1 halaman/komponen** yang dipakai untuk admin, tutor dengan akses edit, maupun tutor yang cuma preview — bedanya cuma section mana yang dirender, berdasarkan `hasEditAccess` dan `role` dari `getCourseDetailForManagement` (§5.5). Tidak ada lagi route terpisah "builder" vs "detail/preview".
+
+**Kalau `hasEditAccess = true` (admin, atau tutor di `course_tutors` course ini):**
+- Form info dasar kursus (title, description, thumbnail) — editable
+- **Section tingkatan** (khusus `role === 'admin'` — tutor dengan `hasEditAccess = true` sekalipun **tetap tidak** melihat/mengedit section ini, sesuai FR-40 hak admin, tidak berubah dari sebelumnya): multi-select checkbox daftar `class_levels` + toggle terpisah "Berlaku untuk Semua Tingkatan"
+- **Section tutor pengampu** (khusus `role === 'admin'`, sama alasannya): multi-select tutor dari daftar `tutor_profiles`, dengan tag/chip yang bisa dihapus (unassign)
+- **Section modul & lesson** (admin & tutor dengan akses edit): drag-and-drop reorder, tombol tambah modul/lesson — form lesson punya pilihan tipe konten (Video atau Dokumen); jika Video, field URL YouTube; jika Dokumen, komponen upload file (memanggil `uploadDocument`, §6.3). Tiap modul juga punya slot **"Kelola Kuis Modul"** — detail builder sepenuhnya di TSD-Quiz.md
+- **Section Siswa Enrolled (baru, v1.6, A6)** — table dari `getEnrolledStudentsForCourse` (§5.5b): nama, email, tingkatan, progress (`X/Y lesson`). **Read-only** di sini — tidak ada aksi pindah tingkatan (itu murni hak admin, lihat TSD-Auth-ClassLevel.md v1.2)
+- **Section Reviews (baru, v1.6, A7)** — list review + rata-rata rating dari `getReviewsForCourse` (reuse TSD-Student-Dashboard.md §4.3.3), read-only (submit review tetap murni hak siswa)
+- Tombol "Publish" — jika validasi §4.3 gagal, tampilkan pesan error tepat di section tingkatan
+
+**Kalau `hasEditAccess = false` (tutor cuma preview, tab "Kursus Lain"):**
+- Semua section di atas jadi **read-only** (info dasar, struktur modul/lesson terlihat tapi tidak bisa diedit), **kecuali**:
+  - Section tingkatan & tutor pengampu — **tidak ditampilkan sama sekali** (itu memang admin-only, bukan soal edit/read-only)
+  - Section Siswa Enrolled — **tidak ditampilkan sama sekali** (A6 — data tidak pernah sampai ke client)
+  - Section Reviews — **tetap tampil** (A7 — review memang publik)
+- Tidak ada tombol "Publish"/simpan apa pun di mode ini
 
 ### 8.3 Siswa — `/student/courses` (Listing)
 - Grid/list card kursus hasil `getCourseListForStudent`
@@ -695,8 +799,10 @@ const markLessonSchema = z.object({
 - **Sudah enroll (`isEnrolled = true`):** struktur modul → lesson penuh (accordion/expandable list). Per lesson: jika `video`, embed YouTube iframe standar (`https://www.youtube.com/embed/{videoId}`); jika `document`, tampilkan preview sesuai §6.4. Tombol "Tandai Selesai" / "Batalkan Tanda Selesai" (toggle, state dari `lesson_progress` yang sudah di-include di query §5.2), progress bar ringkas di header (jumlah lesson selesai / total lesson dalam course — **tidak** menghitung status kuis modul, itu badge terpisah, lihat TSD-Quiz.md §7.3). Kalau modul punya kuis, badge status kuis (Belum dikerjakan/Belum lulus/Lulus) tampil di bawah daftar lesson modul itu, murni informasional — tidak mempengaruhi akses lesson mana pun
 - Tidak ada tombol "Un-enroll" di Tier 1 — sekali enroll, tetap enroll (selaras A2, tidak ada mekanisme keluar dari kursus)
 
-### 8.5 Tutor — `/tutor/courses` (Listing Scoped)
-- Sama seperti §8.3 secara struktur, tapi data dari `getCourseListForTutor` — **tidak ada** UI untuk "lihat kursus lain", tidak ada search yang menembus scope ini
+### 8.5 Tutor — `/tutor/courses` (v1.6, digabung dengan bekas "Eksplorasi Kursus")
+- **2 tab**: "Kursus Saya" (dari `getMyCoursesForTutor`, §5.3) dan "Kursus Lain" (dari `getOtherCoursesForTutor`) — **exclusive**, course yang sama tidak muncul di dua tab sekaligus
+- Tombol **"+ Buat Kursus Baru"** selalu terlihat di kedua tab (memanggil `createCourse`, §4.1) — course baru otomatis masuk ke tab "Kursus Saya" karena pembuatnya langsung jadi anggota `course_tutors`
+- Klik card di tab mana pun → masuk ke **Course Detail** yang sama (§8.2), mode edit/read-only otomatis mengikuti `hasEditAccess` — tutor tidak perlu tahu/pilih "mode" apa pun secara eksplisit, cukup konsekuensi natural dari tab asal & kepemilikannya
 
 ---
 
@@ -715,6 +821,9 @@ const markLessonSchema = z.object({
 | 8 | Video YouTube yang di-input ternyata di-private-kan tutor setelah lesson dibuat | Tidak terdeteksi otomatis oleh sistem (bukan dicek server-side) — muncul sebagai video error saat siswa memutar; mitigasi dokumentasi, bukan solusi teknis (lihat SDD §10) |
 | 9 | Admin unassign satu-satunya tutor dari kursus yang published | Diizinkan — kursus tetap published & bisa diakses siswa, hanya tidak ada tutor yang "memiliki" untuk sementara sampai admin assign ulang |
 | 10 | Dua admin/tutor reorder modul secara bersamaan (race condition) | Diterima sebagai limitasi Tier 1 (last-write-wins, konsisten dengan skala kecil single-tenant) — tidak dibangun locking khusus |
+| 11 | (v1.6) Tutor tanpa akses edit (tab "Kursus Lain") coba akses data siswa enrolled lewat manipulasi request langsung ke `getEnrolledStudentsForCourse` | Ditolak — fungsi ini hanya pernah dipanggil dari dalam `getCourseDetailForManagement` setelah cek `hasEditAccess` (§5.5), tidak ada endpoint terpisah yang bisa dipanggil langsung tanpa guard yang sama |
+| 12 | (v1.6) Tutor coba `updateCourse`/`createModule`/dst pada course di tab "Kursus Lain" (manipulasi request, bukan cuma UI yang menyembunyikan tombol) | Ditolak `403` — `canManageCourse` (§6.1) tetap jadi satu-satunya sumber kebenaran permission, tidak berubah dari sebelumnya, cuma sekarang dipakai juga untuk menentukan `hasEditAccess` di §5.5 |
+| 13 | (v1.6) Tutor membuat course baru dari `/tutor/courses` | Course baru langsung muncul di tab "Kursus Saya" (karena `createCourse` §4.1 auto-insert `course_tutors` untuk pembuatnya), **tidak pernah** muncul dulu di "Kursus Lain" sebelum pindah tab |
 
 ---
 
@@ -725,9 +834,11 @@ const markLessonSchema = z.object({
 | Supabase Storage | Bucket `documents`, signed URL generation (§6.3, §6.4) |
 | `@cyntler/react-doc-viewer` | Rendering dokumen PDF/PPT/Word secara native di komponen React (§6.4) |
 | YouTube (embed iframe biasa) | Video materi, tanpa API key di Tier 1 |
-| `prisma` | Transaksi batch untuk `reorderModules`/`reorderLessons`, upsert untuk `enrollments`/`lesson_progress` |
-| TSD-Auth-ClassLevel.md | `getAccessibleCourseFilter` helper, model `User`/`StudentProfile`/`ClassLevel` |
-| TSD-Quiz.md (v3.0, dependency ringan satu arah) | TSD-Quiz.md butuh model `Module`, `Course`, `Enrollment`, pola `canManageCourse` dari dokumen ini — tapi **tidak sebaliknya**: dokumen ini tidak butuh apa pun dari TSD-Quiz.md. Course Builder (§8.2) & halaman detail kursus (§8.4) cukup menyediakan 1 slot UI per modul untuk badge status kuis, datanya sepenuhnya dikelola TSD-Quiz.md |
+| `prisma` | Transaksi batch untuk `reorderModules`/`reorderLessons`, upsert untuk `enrollments`/`lesson_progress`; `groupBy` untuk hitung progress per course (§5.5b) |
+| TSD-Auth-ClassLevel.md (v1.2) | Model `User`/`StudentProfile`/`ClassLevel`; **tidak lagi** dependency ke `assignStudentToClassLevel` (v1.6 — fitur itu murni admin, dihapus dari sisi tutor) |
+| TSD-Quiz.md (v3.0, dependency ringan satu arah) | TSD-Quiz.md butuh model `Module`, `Course`, `Enrollment`, pola `canManageCourse` dari dokumen ini — tapi **tidak sebaliknya** |
+| TSD-Student-Dashboard.md (v1.0, dependency dua arah sejak v1.6/A7) | Dokumen ini **memanggil** `getReviewsForCourse` (§5.6) yang didefinisikan kanonik di sana — dependency baru yang sebelumnya cuma satu arah (TSD-Student-Dashboard yang butuh dari sini, bukan sebaliknya) |
+| TSD-Tutor-Dashboard.md (v1.1, dependency erat) | Halaman `/tutor/courses` (§8.5) & Course Detail (§8.2) yang didetailkan di sini jadi tulang punggung utama dashboard tutor — TSD-Tutor-Dashboard.md v1.1 sekarang cuma menyisakan ringkasan angka & aggregate "Siswa Saya" lintas course, bukan detail per-course lagi |
 
 ---
 
@@ -736,7 +847,11 @@ const markLessonSchema = z.object({
 - [ ] Tutor membuat kursus baru → otomatis jadi pengampu tanpa perlu admin assign manual
 - [ ] Admin bisa assign/unassign banyak tutor ke satu kursus, dan banyak tingkatan ke satu kursus (atau flag "semua tingkatan")
 - [ ] Kursus tidak bisa dipublish tanpa tingkatan/flag terisi, pesan error jelas
-- [ ] Tutor hanya melihat & bisa edit kursus yang dia ampu — diverifikasi manual coba akses `courseId` kursus tutor lain langsung via URL
+- [ ] Tutor hanya bisa **edit** kursus yang dia ampu (tab "Kursus Saya") — diverifikasi manual coba edit `courseId` kursus tutor lain langsung via URL/request, harus 403
+- [ ] Tutor bisa **melihat** (read-only) semua kursus lain di institusi lewat tab "Kursus Lain", termasuk struktur modul/lesson-nya, tapi tanpa section Siswa Enrolled & tanpa tombol edit apa pun
+- [ ] Course Detail admin & tutor memakai 1 komponen yang sama (dicek: tidak ada 2 implementasi terpisah untuk "builder" vs "preview")
+- [ ] Response API untuk tutor yang cuma preview (`hasEditAccess: false`) **tidak mengandung** data siswa enrolled sama sekali (dicek lewat Network tab) — bukan cuma disembunyikan di UI
+- [ ] Section Reviews tampil di Course Detail untuk semua yang bisa akses (termasuk tutor preview), datanya identik dengan yang tampil di halaman siswa
 - [ ] Siswa hanya melihat kursus sesuai tingkatannya atau yang "semua tingkatan", ditambah kursus yang sudah pernah dia enroll sebelumnya (grandfathering)
 - [ ] Siswa bisa lihat preview kursus (struktur modul/lesson terkunci) sebelum enroll, dan konten (video) baru terbuka setelah klik "Enroll"
 - [ ] Response `getCourseDetailForStudent` untuk siswa yang belum enroll **tidak mengandung** `videoUrl`/`documentUrl` sama sekali (dicek lewat Network tab, bukan cuma UI)
@@ -748,4 +863,4 @@ const markLessonSchema = z.object({
 
 ---
 
-*TSD ini merujuk ke SDD.md (§3, §5, §7.6–7.7) dan TSD-Auth-ClassLevel.md untuk dependency dasar. Perubahan pada dokumen tersebut harus tercermin di revisi TSD ini.*
+*TSD ini merujuk ke SDD.md (§3, §5, §7.6–7.7), TSD-Auth-ClassLevel.md (v1.2), TSD-Student-Dashboard.md (v1.0, `getReviewsForCourse`), dan TSD-Tutor-Dashboard.md (v1.1) untuk dependency dasar. Perubahan pada dokumen-dokumen tersebut harus tercermin di revisi TSD ini.*

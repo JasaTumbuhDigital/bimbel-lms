@@ -1,12 +1,16 @@
 # Technical Spec Document (TSD)
 ## Fitur: Auth & Class Level Management
 
-**Versi:** 1.1
-**Tanggal:** 5 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.6)
+**Versi:** 1.2
+**Tanggal:** 2 September 2026
+**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.4) · Implementation-Plan.md (v2.9, Fase 1 & 1b) · TSD-Tutor-Dashboard.md (v1.1)
 **Scope Implementation Plan:** Fase 1 (Setup Fondasi & Auth) + Fase 1b (Manajemen Kelas/Tingkatan)
 
-> **Ringkasan perubahan v1.1:** Disesuaikan dengan arsitektur Auth baru (SDD v1.4, TSD-Auth-Account-Management v1.1) — `mustChangePassword` dipindah ke tabel `users` (berlaku semua role), fitur pembuatan akun digeneralisasi jadi `createUserAccount` di TSD Auth, dan redirect ganti password menjadi `/change-password-required`.
+> **Ringkasan perubahan v1.2 (REVERT v1.1):** Setelah didiskusikan ulang, diputuskan **tutor tidak perlu bisa memindahkan tingkatan siswa sama sekali** — pindah tingkatan kembali jadi **hak eksklusif admin**, seperti v1.0. Alasan: tutor sekarang 100% fokus by-Course (kelola konten, lihat siswa/progress course miliknya — didetailkan di TSD-Course-Content.md & TSD-Tutor-Dashboard.md v1.1); urusan tingkatan/kelas dianggap murni administratif institusi, bukan ranah akademik tutor. Scoping tutor yang ditambahkan di v1.1 (§3.2, §5.3) **dihapus lagi** — `assignStudentToClassLevel` & RLS `student_profiles` kembali ke bentuk admin-only v1.0.
+>
+> **Ringkasan perubahan v1.1 (sudah tidak berlaku, dipertahankan sebagai catatan historis):** ~~Mengisi celah scoping tutor di `assignStudentToClassLevel`~~ — ternyata arahnya salah, lihat revert di atas.
+>
+> **Catatan:** §4 dokumen ini (Auth Module: login, createStudentAccount, changePassword, dst) sudah **digantikan** oleh TSD-Auth-Account-Management.md (lebih baru & lebih detail) — dianggap tidak berlaku lagi, dipertahankan di sini apa adanya cuma untuk konteks historis, jangan diimplementasikan dari sini. Bagian yang **masih berlaku** dari dokumen ini hanya §5 (Class Level Module) dan bagian RLS/skema terkait tingkatan.
 
 ---
 
@@ -29,7 +33,7 @@ Spesifikasi siap-coding untuk dua modul fondasi yang harus berdiri sebelum modul
 | FR-38 | Relasi many-to-many kursus↔tingkatan + flag `visible_to_all_levels` |
 
 ### 1.3 Out of Scope (Dibahas di TSD Terpisah)
-- **Sebagian besar fitur Auth** (`createUserAccount`, `changePassword`, form login) sekarang diuraikan secara kanonik di **TSD-Auth-Account-Management.md v1.1** (dokumen ini akan mereferensikan ke sana untuk menghindari duplikasi).
+- Registrasi akun tutor oleh admin (mekanismenya sama seperti FR-2, akan disebut singkat di §4.2, detail penuh menyusul jika ada kebutuhan spesifik yang beda)
 - Penugasan tutor ke kursus (`course_tutors`) — bagian dari TSD Course & Content Module (Fase 2), karena baru relevan saat entity `courses` dibangun
 - Penerapan filter `course_class_levels` ke query listing kursus — helper query didefinisikan di sini (§5.3), tapi pemakaiannya di halaman kursus dibahas di TSD Course & Content Module
 - Registrasi mandiri (self-register) — FR-3, Tier 2
@@ -150,22 +154,32 @@ WITH CHECK (
 
 ### 3.2 Tabel `student_profiles`
 ```sql
--- SELECT: siswa baca profilnya sendiri; admin baca semua; tutor TIDAK punya akses langsung
--- di sini (scoping tutor ke siswa "miliknya" via course_tutors didefinisikan di TSD Course Module)
+-- SELECT: siswa baca profilnya sendiri; admin baca semua;
+-- tutor baca TERBATAS ke siswa yang enrolled di salah satu course yang dia ampu
+-- (dipertahankan dari v1.1 — BUKAN untuk pindah kelas lagi, tapi tetap dibutuhkan untuk
+-- fitur "lihat siswa enrolled di course-ku" di TSD-Course-Content.md & TSD-Tutor-Dashboard.md v1.1)
 CREATE POLICY student_profiles_select ON student_profiles FOR SELECT
 USING (
   user_id = (SELECT id FROM users WHERE auth_id = auth.uid())
   OR EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
+  OR EXISTS (
+    SELECT 1 FROM enrollments e
+    JOIN course_tutors ct ON ct.course_id = e.course_id
+    JOIN tutor_profiles tp ON tp.id = ct.tutor_profile_id
+    JOIN users u ON u.id = tp.user_id
+    WHERE e.student_id = student_profiles.id AND u.auth_id = auth.uid()
+  )
 );
 
--- UPDATE (termasuk pindah class_level_id): admin dan tutor
+-- UPDATE (termasuk pindah class_level_id): REVERT v1.2 — hanya admin, tutor TIDAK punya akses tulis sama sekali
+-- (baca boleh, lihat policy SELECT di atas — tapi baca ≠ tulis, RLS Postgres memang memisahkan keduanya)
 CREATE POLICY student_profiles_update ON student_profiles FOR UPDATE
 USING (
-  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role IN ('admin', 'tutor'))
+  EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin')
   OR user_id = (SELECT id FROM users WHERE auth_id = auth.uid()) -- siswa hanya untuk kasus tertentu, lihat catatan di bawah
 );
 ```
-> **Catatan penting:** Policy `student_profiles_update` di atas sengaja **tidak** membedakan kolom mana yang boleh diubah siswa vs admin (RLS Postgres bekerja di level row, bukan kolom). Siswa **tidak boleh** bisa mengubah `class_level_id` sendiri — ini harus ditegakkan di **layer Server Action** (validasi eksplisit: field apa saja yang boleh masuk payload dari request siswa), bukan hanya mengandalkan RLS. Lihat §4.1 `updateProfile` untuk detail pembatasan field.
+> **Catatan penting:** Policy `student_profiles_update` di atas sengaja **tidak** membedakan kolom mana yang boleh diubah siapa (RLS Postgres bekerja di level row, bukan kolom). Siswa **tidak boleh** bisa mengubah `class_level_id` sendiri — ini harus ditegakkan di **layer Server Action** (validasi eksplisit: field apa saja yang boleh masuk payload dari request siswa), bukan hanya mengandalkan RLS. `must_change_password` sekarang ada di tabel `users` (lihat TSD-Auth-Account-Management.md v1.1), bukan di sini lagi. Lihat §4.2 `updateProfile` (dokumen tsb) untuk detail pembatasan field siswa. **Tutor tidak pernah punya akses UPDATE ke tabel ini sama sekali** (v1.2) — policy SELECT yang scoped di atas murni untuk keperluan baca (lihat daftar siswa enrolled di course-nya), bukan pintu masuk untuk menulis.
 
 ### 3.3 Tabel `class_levels`
 ```sql
@@ -232,7 +246,7 @@ const createClassLevelSchema = z.object({
 2. Jika > 0 → return error `CLASS_LEVEL_HAS_ACTIVE_STUDENTS` dengan jumlah siswa terdampak (untuk ditampilkan di UI: "Tidak bisa menonaktifkan, masih ada 12 siswa di tingkatan ini")
 3. Jika 0 → set `isActive = false` (soft-delete, bukan hard delete row — sesuai SDD §3.3)
 
-### 5.3 `updateStudentClassLevelAction`
+### 5.3 `assignStudentToClassLevel`
 
 **FR terkait:** FR-37
 
@@ -245,9 +259,10 @@ const assignStudentSchema = z.object({
 ```
 
 **Alur logika:**
-1. Validasi `newClassLevelId` merujuk ke tingkatan yang `isActive = true` (tidak bisa pindahkan siswa ke tingkatan yang sudah dinonaktifkan)
-2. Update `student_profiles.classLevelId`
-3. **Tidak ada riwayat perpindahan tersimpan di Tier 1** (sesuai PRD §7.3 Out of Scope — log historis perpindahan kelas ditunda ke Tier 2 jika dibutuhkan)
+1. **Hanya admin** (v1.2 — revert dari v1.1; tutor tidak lagi punya jalur untuk memindahkan tingkatan siswa sama sekali, lihat changelog di atas). Guard eksplisit: `role !== 'admin'` → `403 FORBIDDEN`
+2. Validasi `newClassLevelId` merujuk ke tingkatan yang `isActive = true` (tidak bisa pindahkan siswa ke tingkatan yang sudah dinonaktifkan)
+3. Update `student_profiles.classLevelId`
+4. **Tidak ada riwayat perpindahan tersimpan di Tier 1** (sesuai PRD §7.3 Out of Scope — log historis perpindahan kelas ditunda ke Tier 2 jika dibutuhkan)
 
 ### 5.4 Helper: `getAccessibleClassLevelFilter` (dipakai modul lain, bukan Server Action langsung)
 
@@ -338,7 +353,6 @@ middleware.ts (pseudocode alur)
 - [ ] Admin bisa pindahkan siswa antar tingkatan lewat UI inline
 - [ ] Semua RLS policy `class_levels` dan `student_profiles` sudah diterapkan dan diuji
 - [ ] Helper `getAccessibleCourseFilter` sudah ada dan siap dipakai TSD Course & Content Module berikutnya
-- [ ] *(Acceptance criteria selebihnya tentang Auth dipindah ke TSD-Auth-Account-Management.md)*
 
 ---
 

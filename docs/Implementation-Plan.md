@@ -1,11 +1,17 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.6
+**Versi:** 2.9
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.4)
+**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.5)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.9 (perombakan besar sisi tutor & course):** (1) Pindah tingkatan siswa **kembali jadi hak eksklusif admin** — revert dari v2.7, TSD-Auth-ClassLevel.md v1.2. (2) Halaman kelola kursus tutor (`/tutor/courses`) & bekas "Eksplorasi Kursus" **digabung jadi 1 halaman dengan 2 tab**, Course Detail jadi 1 komponen shared admin/tutor dengan mode edit/preview otomatis (TSD-Course-Content.md v1.6). (3) Course Detail sekarang juga menampilkan daftar siswa enrolled per-course (khusus yang punya akses edit) dan reviews (untuk semua). (4) TSD-Tutor-Dashboard.md v1.1 jadi jauh lebih ringkas — cuma ringkasan lintas-course, detail per-course pindah ke TSD-Course-Content.md.
+>
+> **Ringkasan perubahan v2.8:** Diskusi arah desain (belum implementasi) — disepakati bahwa fitur Jadwal (Fase 10) audiensnya berdasarkan **ClassLevel** (bukan Enrollment), dan ide `bulkEnrollByClassLevel` dicatat sebagai penambahan opsional di Fase 2. Tidak ada perubahan skema Tier 1. Lihat catatan di masing-masing fase terkait.
+>
+> **Ringkasan perubahan v2.7:** Dashboard Tutor (`/tutor/dashboard`, `/tutor/students`) didetailkan di TSD-Tutor-Dashboard.md baru — melengkapi Fase 2 yang sebelumnya cuma fokus ke course management, dan sekalian menambal celah scoping tutor di `assignStudentToClassLevel` (FR-37, TSD-Auth-ClassLevel.md v1.1) yang sejak awal belum ada permission check-nya.
+>
 > **Ringkasan perubahan v2.6:** Fase 1 (`createStudentAccount`) & Fase 5 (Admin Dashboard) disinkronkan — akun tutor & admin tambahan sekarang dibuat lewat 1 Server Action yang sama (`createUserAccount`, generalisasi dari `createStudentAccount`), dan `must_change_password` berlaku semua role (dipindah ke tabel `users`). Detail: TSD-Auth-Account-Management.md v1.1, TSD-Admin-Dashboard.md v1.1.
 >
 > **Ringkasan perubahan v2.5:** Fase 3 (Kuis) — relasi kuis dipindah dari per-lesson jadi **per-modul** (sejajar dengan lesson sebagai sub-materi). Kelulusan kuis dipertegas **murni informasional**, tidak lagi otomatis mengisi `lesson_progress` — revisi kecil yang sempat dibutuhkan di Fase 2 (`markLessonComplete`) jadi tidak perlu, Fase 2 & 3 sekarang independen satu arah.
@@ -105,7 +111,7 @@
 
 **Output:** Sistem tingkatan siap jadi fondasi filter akses kursus.
 
-**Terkait:** FR-36, FR-37, FR-38 · SDD §3.2, §3.3, §6.2
+**Terkait:** FR-36, FR-37, FR-38 · SDD §3.2, §3.3, §6.2 · TSD-Auth-ClassLevel.md v1.2 (pindah tingkatan murni hak admin — sempat dicoba diperluas ke tutor di v1.1, lalu di-revert, lihat changelog v1.2 dokumen tsb)
 
 ---
 
@@ -116,14 +122,16 @@
 - [ ] Admin: assign/unassign satu atau lebih tutor pengampu per kursus (`course_tutors`) — FR-40
 - [ ] Siswa: listing kursus terfilter tingkatan; detail kursus tampil sebagai preview (struktur modul terlihat, konten terkunci) sebelum klik "Enroll"
 - [ ] Tombol "Enroll" eksplisit di halaman detail kursus (bukan auto-enroll diam-diam) — buka akses penuh ke konten setelah diklik
-- [ ] Tutor: listing kursus terbatas ke kursus yang dia ampu saja (scoping via `course_tutors`), dengan pembedaan hak akses Tutor Utama (`createdBy`) vs Co-Tutor, serta halaman "Eksplorasi Kursus" Read-Only untuk preview seluruh kursus — FR-41
+- [ ] **(catatan tambahan, disepakati 2 September 2026, belum wajib di-Fase-2)** `bulkEnrollByClassLevel(courseId, classLevelId)` — tutor bisa daftarkan sekaligus semua siswa 1 tingkatan ke course-nya, bukan cuma per-siswa. Cukup insert banyak baris `enrollments` sekaligus (tabel & logic sama persis dengan enroll individual), tidak perlu perubahan skema. Boleh menyusul kapan saja, tidak blocking Fase 2 selesai duluan tanpa ini.
+- [ ] Tutor: 1 halaman `/tutor/courses` dengan 2 tab — "Kursus Saya" (scoped via `course_tutors`, editable) & "Kursus Lain" (semua kursus institusi, read-only preview untuk saling koreksi antar tutor) — tidak dibedakan Tutor Utama vs Co-Tutor untuk hak edit — FR-41
+- [ ] Course Detail (dipakai admin & tutor): section daftar siswa enrolled per-course + progress (khusus yang punya akses edit), section reviews (tampil untuk semua)
 - [ ] Video: embed YouTube unlisted (player biasa, **tanpa** tracking otomatis di T1)
 - [ ] Dokumen: upload PDF/PPT ke Supabase Storage + preview di browser via `@cyntler/react-doc-viewer`
 - [ ] Tombol "Tandai Selesai" manual per lesson (Server Action ke `lesson_progress`, hanya untuk siswa yang sudah enroll)
 
-**Output:** Siswa jelajahi & enroll kursus secara sadar, belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor hanya lihat kursus miliknya.
+**Output:** Siswa jelajahi & enroll kursus secara sadar, belajar & tandai progress manual; admin kelola konten, batasan tingkatan, & penugasan tutor; tutor kelola kursus miliknya + preview read-only kursus lain dari 1 halaman yang sama.
 
-**Terkait:** FR-7, FR-8, FR-9, FR-10, FR-40, FR-41 · SDD §6.2 · TSD-Course-Content.md
+**Terkait:** FR-7, FR-8, FR-9, FR-10, FR-40, FR-41 · SDD §6.2 · TSD-Course-Content.md v1.6 (Course Detail terpadu admin/tutor, §8.2, §8.5 — termasuk daftar siswa enrolled & reviews per-course) · Ringkasan dashboard tutor lintas-course di TSD-Tutor-Dashboard.md v1.1
 
 ---
 
@@ -212,6 +220,8 @@ Modul-modul ini dibangun sebagai **tambahan modular** di atas codebase master, d
 - Jadwal live class + link Zoom/Meet
 - Notifikasi WA (Fonnte/Wablas) sebelum kelas
 - Presensi per sesi oleh tutor
+
+> **Catatan arah desain (disepakati 2 September 2026, belum diimplementasikan):** Audiens jadwal (`Schedule`) ditentukan berdasarkan **ClassLevel**, bukan Enrollment — `Schedule { courseId, classLevelId, tutorId, hari, jam, link }`. Alasan: setiap siswa cuma punya 1 `classLevelId` (scalar), jadi cek bentrok jadwal jadi 1 query sederhana per ClassLevel; kalau berdasarkan Enrollment (opt-in, tak terbatas), deteksi bentrok jauh lebih berat & tidak terjamin. Ini **tidak** mengubah orientasi tutor (tetap 100% by Course untuk materi/kuis/progress) — Schedule cuma layer tipis yang nempelin `classLevelId` sebagai target audiens di atas struktur yang sudah ada. Efek samping positif: 1 Course yang sama bisa punya beberapa baris Schedule untuk ClassLevel berbeda (menjawab kebutuhan "Course A untuk Kelas A vs Kelas B" tanpa duplikasi Course atau entitas "Section" baru). Opsional: saat bikin Schedule, tutor bisa sekalian trigger `bulkEnrollByClassLevel` (lihat Fase 2 addendum) supaya siswa di kelas itu otomatis ter-enroll ke course terkait — tetap eksplisit (tutor yang klik), bukan auto-enroll diam-diam, konsisten dengan A1. **Tidak ada perubahan skema Tier 1 yang perlu dilakukan sekarang** — ini murni catatan arah untuk saat Fase 10 mulai dikerjakan.
 
 **Terkait FR:** FR-21, FR-22, FR-23
 

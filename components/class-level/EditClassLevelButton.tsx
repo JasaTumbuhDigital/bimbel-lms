@@ -116,7 +116,7 @@ export default function EditClassLevelButton({
                                 <button
                                     type="submit"
                                     disabled={isPending}
-                                    className="text-sm px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2 min-w-[100px]"
+                                    className="text-sm px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 flex items-center justify-center gap-2 min-w-25"
                                 >
                                     {isPending ? <><Spinner className="w-3 h-3 text-white" /> Simpan</> : "Simpan Perubahan"}
                                 </button>

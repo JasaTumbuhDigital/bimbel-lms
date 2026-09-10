@@ -95,7 +95,7 @@ export async function deleteReviewAction(reviewId: string) {
 
         // Revalidate halaman yang relevan
         revalidatePath(`/student/courses/${review.courseId}`);
-        revalidatePath("/admin/reviews");
+        revalidatePath("/admin/courses");
 
         return { success: true };
     } catch (error) {

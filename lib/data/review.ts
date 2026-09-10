@@ -45,8 +45,9 @@ export async function getStudentReviewForCourse(courseId: string) {
 }
 
 // Untuk halaman Admin: mengambil semua ulasan dari semua kursus, diurutkan terbaru
-export async function getAllReviewsForAdmin() {
+export async function getAllReviewsForAdmin(courseId?: string) {
     return prisma.review.findMany({
+        where: courseId ? { courseId } : {},
         orderBy: { createdAt: 'desc' },
         include: {
             course: {
