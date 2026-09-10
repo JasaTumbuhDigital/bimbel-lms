@@ -125,7 +125,7 @@ async function CoursePlayerContent({ params }: { params: Promise<{ id: string, l
                         <h1 className="text-2xl font-bold text-slate-900 mt-1">{currentLesson.title}</h1>
                     </div>
 
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                         <MarkAsDoneButton
                             lessonId={currentLesson.id}
                             courseId={course.id}
@@ -136,11 +136,11 @@ async function CoursePlayerContent({ params }: { params: Promise<{ id: string, l
                 </div>
 
                 {/* Konten Embed */}
-                <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-[500px]">
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col min-h-125">
                     {currentLesson.contentType === "video" && currentLesson.videoUrl && (
                         <iframe
                             src={getYouTubeEmbedUrl(currentLesson.videoUrl)}
-                            className="w-full h-full min-h-[500px] border-0"
+                            className="w-full h-full min-h-125 border-0"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                         ></iframe>

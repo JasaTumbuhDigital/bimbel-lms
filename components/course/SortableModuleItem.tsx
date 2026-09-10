@@ -432,7 +432,7 @@ export default function SortableModuleItem({ module, courseId }: { module: any; 
                                 </div>
                             ) : (
                                 <form onSubmit={handleUpdateQuizDetails} className="p-4 border border-purple-200 bg-purple-50 rounded-md space-y-3">
-                                    <h5 className="font-medium text-xs text-purple-900 font-bold uppercase tracking-wider">Edit Detail Kuis</h5>
+                                    <h5 className="text-xs text-purple-900 font-bold uppercase tracking-wider">Edit Detail Kuis</h5>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="sm:col-span-2">
                                             <label className="block text-xs text-gray-600 mb-1">Judul Kuis</label>

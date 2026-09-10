@@ -89,9 +89,9 @@ export function LessonSkeleton() {
                         <div className="h-3 bg-slate-200 rounded w-32 animate-pulse"></div>
                         <div className="h-8 bg-slate-200 rounded w-3/4 animate-pulse"></div>
                     </div>
-                    <div className="h-10 bg-slate-200 rounded w-32 animate-pulse flex-shrink-0"></div>
+                    <div className="h-10 bg-slate-200 rounded w-32 animate-pulse shrink-0"></div>
                 </div>
-                <div className="flex-1 bg-slate-200 rounded-xl animate-pulse min-h-[500px]"></div>
+                <div className="flex-1 bg-slate-200 rounded-xl animate-pulse min-h-125"></div>
                 <div className="mt-6 flex items-center justify-between">
                     <div className="h-10 bg-slate-200 rounded w-32 animate-pulse"></div>
                     <div className="h-10 bg-slate-200 rounded w-32 animate-pulse"></div>

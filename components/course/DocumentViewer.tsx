@@ -7,7 +7,7 @@ export default function DocumentViewer({ url }: { url: string }) {
     const docs = [{ uri: url }];
 
     return (
-        <div className="w-full h-full min-h-[700px] bg-white relative rounded-xl border border-slate-200 overflow-hidden doc-viewer-wrapper">
+        <div className="w-full h-full min-h-175 bg-white relative rounded-xl border border-slate-200 overflow-hidden doc-viewer-wrapper">
             <style dangerouslySetInnerHTML={{
                 __html: `
                 /* Sembunyikan control bar PDF bawaan agar lebih clean */

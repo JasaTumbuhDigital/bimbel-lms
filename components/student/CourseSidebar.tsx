@@ -7,7 +7,7 @@ export function CourseSidebar({ course, basePath = "/student/courses" }: { cours
     const pathname = usePathname();
 
     return (
-        <div className="w-80 flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto hidden md:block shadow-sm">
+        <div className="w-80 shrink-0 border-r border-slate-200 bg-white overflow-y-auto hidden md:block shadow-sm">
             <div className="p-4 border-b border-slate-200 sticky top-0 bg-white z-10 shadow-sm">
                 <Link href={`${basePath}/${course.id}`} className="text-xs text-blue-600 hover:underline mb-2 inline-block font-medium">
                     &larr; Kembali ke Detail Kursus

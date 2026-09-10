@@ -78,7 +78,7 @@ async function ReviewsTable() {
                                 <td className="px-5 py-4">
                                     <Link
                                         href={`/admin/courses/${review.course.id}/edit`}
-                                        className="text-blue-600 hover:underline line-clamp-1 max-w-[200px] block"
+                                        className="text-blue-600 hover:underline line-clamp-1 max-w-50 block"
                                         title={review.course.title}
                                     >
                                         {review.course.title}

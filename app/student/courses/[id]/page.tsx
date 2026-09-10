@@ -56,7 +56,7 @@ export default async function StudentCourseDetailPage(props: { params: Promise<{
                 <div className="max-w-5xl mx-auto px-6 py-8 md:py-12 flex flex-col md:flex-row gap-8 items-center md:items-start">
 
                     {/* Thumbnail */}
-                    <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 flex-shrink-0">
+                    <div className="w-full md:w-1/3 aspect-video relative rounded-xl overflow-hidden shadow-sm bg-slate-100 shrink-0">
                         {fullImageUrl ? (
                             <Image
                                 src={fullImageUrl}

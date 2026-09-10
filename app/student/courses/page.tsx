@@ -89,11 +89,11 @@ async function CourseCatalog() {
                         </div>
 
                         {/* Content */}
-                        <div className="p-5 flex flex-col flex-grow">
+                        <div className="p-5 flex flex-col grow">
                             <h3 className="font-bold text-slate-800 text-lg mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
                                 {course.title}
                             </h3>
-                            <p className="text-sm text-slate-600 line-clamp-2 flex-grow mb-4">
+                            <p className="text-sm text-slate-600 line-clamp-2 grow mb-4">
                                 {course.description || "Tidak ada deskripsi."}
                             </p>
 
