@@ -403,3 +403,110 @@ export async function getEnrolledStudentsForCourse(courseId: string) {
         return [];
     }
 }
+
+/**
+ * 7. Fetch data untuk Tab Peserta (Enrollment Management)
+ * Mengembalikan: daftar siswa yang sudah enrolled + daftar siswa yang belum (per kelas terhubung)
+ */
+export async function getStudentsForEnrollmentTab(courseId: string) {
+    const user = await getAuthenticatedUser();
+    if (!user || (user.role !== "admin" && user.role !== "tutor")) return null;
+
+    try {
+        const course = await prisma.course.findUnique({
+            where: { id: courseId },
+            select: {
+                id: true,
+                createdBy: true,
+                visibleToAllLevels: true,
+                classLevels: { select: { classLevelId: true } },
+                enrollments: {
+                    select: { studentId: true },
+                },
+            },
+        });
+
+        if (!course) return null;
+
+        // Tutor hanya bisa akses jika ia adalah author (createdBy)
+        if (user.role === "tutor") {
+            const isAuthor = course.createdBy === user.id;
+            if (!isAuthor) return null;
+        }
+
+        const enrolledStudentIds = new Set(course.enrollments.map((e) => e.studentId));
+
+        // Ambil ID kelas yang terhubung ke kursus ini
+        const linkedClassLevelIds = course.classLevels.map((cl) => cl.classLevelId);
+
+        // Semua siswa yang sudah ter-enroll
+        const enrolledStudents = await prisma.studentProfile.findMany({
+            where: { id: { in: Array.from(enrolledStudentIds) } },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                classLevel: { select: { id: true, name: true } },
+            },
+            orderBy: { user: { name: "asc" } },
+        });
+
+        // Semua siswa BELUM ter-enroll di kursus ini, dari kelas yang terhubung (atau semua kelas jika visibleToAllLevels)
+        const unenrolledStudents = await prisma.studentProfile.findMany({
+            where: {
+                id: { notIn: Array.from(enrolledStudentIds) },
+                ...(course.visibleToAllLevels
+                    ? {}
+                    : { classLevelId: { in: linkedClassLevelIds } }),
+            },
+            include: {
+                user: { select: { id: true, name: true, email: true } },
+                classLevel: { select: { id: true, name: true } },
+            },
+            orderBy: { user: { name: "asc" } },
+        });
+
+        // Daftar kelas yang memiliki siswa yang belum enrolled (untuk bulk enroll)
+        const classLevels = await prisma.classLevel.findMany({
+            where: course.visibleToAllLevels ? {} : { id: { in: linkedClassLevelIds } },
+            select: {
+                id: true,
+                name: true,
+                _count: {
+                    select: {
+                        studentProfiles: {
+                            where: { id: { notIn: Array.from(enrolledStudentIds) } },
+                        },
+                    },
+                },
+            },
+            orderBy: { name: "asc" },
+        });
+
+        return {
+            courseId: course.id,
+            enrolledStudents: enrolledStudents.map((s) => ({
+                studentProfileId: s.id,
+                userId: s.user.id,
+                name: s.user.name,
+                email: s.user.email,
+                classLevelId: s.classLevel.id,
+                classLevelName: s.classLevel.name,
+            })),
+            unenrolledStudents: unenrolledStudents.map((s) => ({
+                studentProfileId: s.id,
+                userId: s.user.id,
+                name: s.user.name,
+                email: s.user.email,
+                classLevelId: s.classLevel.id,
+                classLevelName: s.classLevel.name,
+            })),
+            classLevels: classLevels.map((cl) => ({
+                id: cl.id,
+                name: cl.name,
+                unenrolledCount: cl._count.studentProfiles,
+            })),
+        };
+    } catch (error) {
+        console.error("Gagal mengambil data enrollment tab:", error);
+        return null;
+    }
+}

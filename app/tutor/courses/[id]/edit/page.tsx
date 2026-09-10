@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getCourseById } from "@/lib/data/course";
+import { getCourseById, getStudentsForEnrollmentTab } from "@/lib/data/course";
 import CourseBuilder from "@/components/course/CourseBuilder";
 import { CourseBuilderSkeleton } from "@/components/ui/skeletons";
 import { getAuthenticatedUser } from "@/lib/data/auth";
@@ -24,10 +24,14 @@ async function TutorEditCourseContent({ courseId }: { courseId: string }) {
 
     let availableClassLevels: any[] = [];
     let availableTutors: any[] = [];
+    let enrollmentData = null;
 
     if (isOwner) {
-        availableClassLevels = await getClassLevelsForSelect();
-        availableTutors = await getTutorsForSelect();
+        [availableClassLevels, availableTutors, enrollmentData] = await Promise.all([
+            getClassLevelsForSelect(),
+            getTutorsForSelect(),
+            getStudentsForEnrollmentTab(courseId),
+        ]);
     }
 
     return (
@@ -37,6 +41,7 @@ async function TutorEditCourseContent({ courseId }: { courseId: string }) {
             isOwner={isOwner}
             availableClassLevels={availableClassLevels}
             availableTutors={availableTutors}
+            enrollmentData={enrollmentData}
         />
     );
 }

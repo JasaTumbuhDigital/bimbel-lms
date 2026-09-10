@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getCourseById } from "@/lib/data/course";
+import { getCourseById, getStudentsForEnrollmentTab } from "@/lib/data/course";
 import { getClassLevelsForSelect } from "@/lib/data/class-level";
 import { getTutorsForSelect } from "@/lib/data/user";
 import CourseBuilder from "@/components/course/CourseBuilder";
@@ -11,11 +11,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 async function AdminEditCourseContent({ courseId }: { courseId: string }) {
-    // Fetch data secara paralel (Course, Tingkatan Kelas, dan Tutor)
-    const [course, classLevels, tutors] = await Promise.all([
+    // Fetch data secara paralel (Course, Tingkatan Kelas, Tutor, dan data Enrollment)
+    const [course, classLevels, tutors, enrollmentData] = await Promise.all([
         getCourseById(courseId),
         getClassLevelsForSelect(),
         getTutorsForSelect(),
+        getStudentsForEnrollmentTab(courseId),
     ]);
 
     if (!course) {
@@ -23,11 +24,12 @@ async function AdminEditCourseContent({ courseId }: { courseId: string }) {
     }
 
     return (
-        <CourseBuilder 
-            course={course} 
-            role="admin" 
-            availableClassLevels={classLevels} 
-            availableTutors={tutors} 
+        <CourseBuilder
+            course={course}
+            role="admin"
+            availableClassLevels={classLevels}
+            availableTutors={tutors}
+            enrollmentData={enrollmentData}
         />
     );
 }
