@@ -87,7 +87,7 @@ export default function AdminDashboardPage() {
 
                     {/* Card 5: Manajemen Ulasan */}
                     <Link
-                        href="/admin/reviews"
+                        href="/admin/courses?status=reviews"
                         className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
                     >
                         <h2 className="text-base font-semibold text-slate-900 mb-1">

@@ -20,7 +20,7 @@ export async function getAdminDashboardSummary() {
             }),
             // 3. Total kursus yang terdaftar
             prisma.course.count({
-                where: { isPublished: true, isArchived: false }
+                where: { isArchived: false }
             }),
             // 4. Jumlah tingkatan kelas yang memiliki minimal 1 siswa aktif (Kelas Berjalan)
             prisma.classLevel.count({
