@@ -1,11 +1,15 @@
 # Product Requirements Document (PRD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.4
+**Versi:** 2.6
 **Tanggal:** 2 September 2026
 **Status:** Draft
 **Owner:** [Nama kamu]
 
+> **Ringkasan perubahan v2.6:** FR-35 direvisi lagi — editor jadi WYSIWYG (bukan cuma "gambar embed" generik), ditambah approval workflow, dan hak co-author dipersempit jadi cuma isi konten (bukan ikut kategori/tag/SEO/status). FR-35b baru dicatat untuk kandidat Tier 2 (komentar, related articles, jadwal publish, dst). Lihat TSD-Blog-Article.md v2.0.
+>
+> **Ringkasan perubahan v2.5:** FR-35 diperluas — blog/artikel sekarang punya kategori (dikurasi admin), tag (bebas, siapa pun bisa buat), co-author, dan builder dengan gambar embed. Sebelumnya cuma disebut "SEO metadata dasar" tanpa detail struktur konten. Lihat TSD-Blog-Article.md.
+>
 > **Ringkasan perubahan v2.4:** FR-11 relasinya dipindah dari per-lesson jadi **per-modul** (sejajar dengan lesson sebagai sub-materi, sesuai bahasa asli FR-7). Kelulusan kuis dipertegas sebagai **murni informasional** — tidak lagi ada mekanisme "otomatis menandai lesson selesai" yang sempat disebut di v2.3.
 >
 > **Ringkasan perubahan v2.3:** FR-11/FR-12 (kuis) dirombak konsepnya — kuis sekarang jadi **post-test per lesson** dengan passing grade, bukan modul "ujian" berdiri sendiri dengan riwayat percobaan penuh. Kelulusan kuis otomatis menandai lesson selesai (menggantikan tombol manual untuk lesson yang punya kuis). FR-12 tidak lagi soal "riwayat percobaan" — cukup status lulus & skor terbaik. Ide "ujian/exam standalone" (berdiri sendiri setara modul, bisa macam-macam jenis soal, ada timer) dicatat sebagai kandidat fitur terpisah di masa depan, lihat Implementation-Plan.md §4 Fase 11.
@@ -189,7 +193,7 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-12 (P0, T1):** Siswa harus bisa melihat status kelulusan & skor terbaik tiap kuis modul yang pernah dikerjakan.
   - Sistem **tidak** menyimpan riwayat kronologis tiap percobaan (waktu tiap attempt) — hanya status agregat per kuis: sudah lulus/belum, dan skor terbaik. Siswa boleh mengulang kuis tanpa batas; skor terbaik selalu di-*override* naik, status lulus tidak pernah turun setelah tercapai.
 - **FR-13 (P1, T2):** Sistem harus mendukung kuis dengan timer, otomatis submit saat waktu habis, dan menampilkan pembahasan soal setelah selesai.
-- **FR-11b (Kandidat, belum diprioritaskan — T1/T2 lanjutan):** Modul **ujian/exam standalone** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), mendukung berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, dan (kemungkinan) benar-benar menggerbang kelulusan kursus — untuk kebutuhan sertifikasi yang lebih formal. Draft teknis awal sudah ada (TSD-Exam-Standalone-DRAFT.md) tapi perlu diper-revisit & diprioritaskan terpisah — belum masuk fase manapun di Implementation Plan saat ini.
+- **FR-11b (Kandidat, belum diprioritaskan — T1/T2 lanjutan):** Modul **ujian/exam standalone** — berdiri sendiri setara "modul" di sebuah kursus (bukan melekat ke 1 modul tertentu), mendukung berbagai jenis soal (bukan cuma pilihan ganda), riwayat percobaan penuh, dan (kemungkinan) benar-benar menggerbang kelulusan kursus — untuk kebutuhan sertifikasi yang lebih formal. Draft teknis awal sudah ada (TSD-Exam-Standalone-DRAFT.md) tapi perlu direvisit & diprioritaskan terpisah — belum masuk fase manapun di Implementation Plan saat ini.
 
 ### 5.4 Dashboard Siswa
 - **FR-14 (P0, T1):** Dashboard harus menampilkan ringkasan real-time: jumlah kursus enrolled, aktif, selesai.
@@ -230,7 +234,8 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 
 ### 5.11 Landing Page & Blog
 - **FR-34 (P0, T1):** Landing page harus menampilkan hero section, statistik institusi, listing kursus dengan filter kategori, dan testimoni — dengan branding (nama, logo, warna) yang mudah dikonfigurasi per klien (config-driven, bukan hardcoded).
-- **FR-35 (P0, T1):** Sistem harus punya halaman blog/artikel dengan SEO metadata dasar per artikel (title, description, og-image).
+- **FR-35 (P0, T1):** Sistem harus punya halaman blog/artikel dengan kategori (genre/tema), tag, editor WYSIWYG dengan kemampuan menyisipkan gambar, approval workflow (draft → pending review → published), dan SEO metadata dasar per artikel (title, description, og-image). Admin bisa kelola & approve/publish semua artikel siapa pun; tutor (Author Utama) hanya bisa kelola & ajukan review artikelnya sendiri; co-author yang dibantu-tandai hanya berhak edit isi konten (judul/isi/excerpt/cover image), tidak berhak atas kategori/tag/SEO/status terbit/co-author lain.
+- **FR-35b (Kandidat Tier 2, belum diprioritaskan):** Komentar pembaca, artikel terkait otomatis, jadwal publish, read count/analytics per artikel, riwayat revisi, notifikasi WA/email artikel baru. Lihat TSD-Blog-Article.md §1.5 untuk detail & alasan penundaan masing-masing.
 
 ---
 

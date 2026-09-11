@@ -1,11 +1,15 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.9
+**Versi:** 2.11
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4), SDD.md (v1.5)
+**Terkait dokumen:** PRD.md (v2.6), SDD.md (v1.5)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.11:** Fase 6 (Blog) direvisi lagi — editor jadi WYSIWYG (TipTap, JSON storage), ditambah approval workflow (draft → pending review → published), hak co-author dipersempit ke isi konten saja. Detail: TSD-Blog-Article.md v2.0.
+>
+> **Ringkasan perubahan v2.10:** Fase 6 (Blog) dirombak dari rencana "MDX statis" jadi **DB-driven dengan builder** — kategori, tag, co-author, upload gambar, editor Markdown, SEO per artikel. Landing page (FR-34) tetap sengaja tidak didetailkan sebagai TSD (kerja desain/konten, bukan spek fitur).
+>
 > **Ringkasan perubahan v2.9 (perombakan besar sisi tutor & course):** (1) Pindah tingkatan siswa **kembali jadi hak eksklusif admin** — revert dari v2.7, TSD-Auth-ClassLevel.md v1.2. (2) Halaman kelola kursus tutor (`/tutor/courses`) & bekas "Eksplorasi Kursus" **digabung jadi 1 halaman dengan 2 tab**, Course Detail jadi 1 komponen shared admin/tutor dengan mode edit/preview otomatis (TSD-Course-Content.md v1.6). (3) Course Detail sekarang juga menampilkan daftar siswa enrolled per-course (khusus yang punya akses edit) dan reviews (untuk semua). (4) TSD-Tutor-Dashboard.md v1.1 jadi jauh lebih ringkas — cuma ringkasan lintas-course, detail per-course pindah ke TSD-Course-Content.md.
 >
 > **Ringkasan perubahan v2.8:** Diskusi arah desain (belum implementasi) — disepakati bahwa fitur Jadwal (Fase 10) audiensnya berdasarkan **ClassLevel** (bukan Enrollment), dan ide `bulkEnrollByClassLevel` dicatat sebagai penambahan opsional di Fase 2. Tidak ada perubahan skema Tier 1. Lihat catatan di masing-masing fase terkait.
@@ -174,11 +178,11 @@
 ---
 
 ### Fase 6 — Landing Page & Blog
-- [ ] Landing page: hero, statistik, listing kursus + filter kategori, testimoni — full config-driven
+- [ ] Landing page: hero, statistik, listing kursus + filter kategori, testimoni — full config-driven (2-3 template contoh umum, sisanya custom by-request per klien saat replikasi — tidak perlu didetailkan sebagai TSD)
 - [ ] `next/image` + `generateMetadata` untuk SEO dasar
-- [ ] Blog/artikel: mulai dari MDX statis + SEO metadata dasar
+- [ ] Blog/artikel — **DB-driven dengan builder WYSIWYG** (TipTap, bukan Markdown/MDX lagi, lihat TSD-Blog-Article.md v2.0): kategori (kurasi admin), tag (bebas), co-author dengan hak terbatas ke isi konten, **approval workflow** (draft → pending review → published), SEO metadata per artikel
 
-**Terkait:** FR-34, FR-35
+**Terkait:** FR-34, FR-35 · TSD-Blog-Article.md v2.0
 
 ---
 
