@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/skeletons";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { redirect } from "next/navigation";
+import CreateDraftButton from "@/components/blog/CreateDraftButton";
 
 export const metadata = {
     title: "Manajemen Blog - Admin",
@@ -31,12 +32,7 @@ export default async function AdminBlogPage() {
                         >
                             Antrean Review
                         </Link>
-                        <Link
-                            href="/admin/blog/new"
-                            className="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                        >
-                            + Tulis Artikel Baru
-                        </Link>
+                        <CreateDraftButton basePath="/admin/blog" />
                     </div>
                 </header>
 

@@ -34,81 +34,48 @@ async function verifyBlogAccess(articleId: string, userId: string, role: string)
 }
 
 /**
- * 1. Action Membuat Artikel Baru (Admin & Tutor)
- * TSD §4.1: createArticle
+ * 1. Action Create Empty Draft (Admin & Tutor)
+ * Membuat draft artikel kosong dan mengembalikan ID-nya agar bisa langsung masuk ke Editor.
  */
-export async function createArticleAction(
-    prevState: any,
-    formData: FormData
-): Promise<ActionResult<{ articleId: string; slug: string }>> {
+export async function createEmptyDraftAction(): Promise<ActionResult<{ articleId: string; slug: string }>> {
     const user = await getAuthenticatedUser();
-    // Hanya admin dan tutor yang boleh membuat artikel (menjadi Author Utama)
+    // Hanya admin dan tutor yang boleh membuat artikel
     if (!user || (user.role !== "admin" && user.role !== "tutor")) {
         return { success: false, error: "Akses ditolak. Hanya Admin atau Tutor yang diizinkan." };
     }
 
-    const rawTagNames = formData.getAll("tagNames") as string[];
-
-    const rawData = {
-        title: formData.get("title") as string,
-        categoryId: formData.get("categoryId") as string || undefined,
-        tagNames: rawTagNames.filter(Boolean),
-    };
-
-    const validation = createArticleSchema.safeParse(rawData);
-    if (!validation.success) {
-        return {
-            success: false,
-            error: "Validasi gagal",
-            fieldErrors: validation.error.flatten().fieldErrors,
-        };
-    }
-
-    const { title, categoryId, tagNames } = validation.data;
-
-    let slug = generateSlug(title);
+    const title = "Untitled Document";
+    const baseSlug = generateSlug(title);
+    let slug = baseSlug;
 
     try {
-        // Cek bentrok slug
-        const existingSlug = await prisma.blogArticle.findUnique({ where: { slug } });
-        if (existingSlug) {
-            // Auto-suffix jika bentrok
-            slug = `${slug}-${Math.random().toString(36).substring(2, 6)}`;
+        // Hindari bentrok slug untuk "untitled-document"
+        let counter = 1;
+        while (true) {
+            const existingSlug = await prisma.blogArticle.findUnique({ where: { slug } });
+            if (!existingSlug) break;
+            slug = `${baseSlug}-${counter}`;
+            counter++;
         }
 
-        // Insert Artikel beserta relasi ke tags dan category
+        // Insert Artikel kosong
         const newArticle = await prisma.blogArticle.create({
             data: {
                 title,
                 slug,
                 content: {},
                 status: "draft",
-                authorId: user.id, // Penulis yang membuat ini otomatis jadi Author Utama
-                categoryId: categoryId || null,
-                tags: {
-                    create: tagNames.map(name => {
-                        const tagName = name.trim();
-                        const tagSlug = generateSlug(tagName);
-                        return {
-                            tag: {
-                                connectOrCreate: {
-                                    where: { name: tagName },
-                                    create: { name: tagName, slug: tagSlug }
-                                }
-                            }
-                        };
-                    })
-                }
+                authorId: user.id,
             }
         });
 
         revalidatePath("/admin/blog");
         revalidatePath("/tutor/blog");
-        // Kita juga bisa arahkan user langsung ke halaman edit builder setelah berhasil (dilakukan dari komponen UI form)
-        return { success: true, message: "Artikel berhasil dibuat", data: { articleId: newArticle.id, slug: newArticle.slug } };
+        
+        return { success: true, message: "Draft berhasil dibuat", data: { articleId: newArticle.id, slug: newArticle.slug } };
     } catch (error) {
-        console.error("Error createArticleAction:", error);
-        return { success: false, error: "Gagal membuat artikel." };
+        console.error("Error createEmptyDraftAction:", error);
+        return { success: false, error: "Gagal membuat draft artikel." };
     }
 }
 
@@ -138,19 +105,65 @@ export async function updateArticleContentAction(
     }
 
     const { articleId, title, content, excerpt, coverImageUrl } = validation.data;
+    const actionType = formData.get("actionType") as string;
 
     const access = await verifyBlogAccess(articleId, user.id, user.role);
     if (!access.success) return { success: false, error: access.error };
 
+    // Proses perubahan status jika ada actionType dan user berhak (Author Utama/Admin)
+    let newStatus = access.article?.status;
+    let submittedAt = access.article?.submittedAt;
+    let publishedAt = access.article?.publishedAt;
+
+    if (actionType && access.isAuthor) {
+        if (actionType === "draft") {
+            newStatus = "draft";
+        } else if (actionType === "review") {
+            newStatus = "pending_review";
+            submittedAt = new Date();
+        } else if (actionType === "publish" && user.role === "admin") {
+            newStatus = "published";
+            if (!publishedAt) publishedAt = new Date();
+        }
+    }
+
+    // Jika admin mengedit artikel milik orang lain (bukan pemilik asli),
+    // daftarkan admin sebagai co-author secara otomatis.
+    const article = access.article!;
+    const isAdminEditingOthersArticle = user.role === "admin" && article.authorId !== user.id;
+
     try {
         await prisma.blogArticle.update({
             where: { id: articleId },
-            data: { title, content, excerpt, coverImageUrl }
+            data: { 
+                title, 
+                content, 
+                excerpt, 
+                coverImageUrl,
+                status: newStatus,
+                submittedAt,
+                publishedAt
+            }
         });
+
+        // Tambahkan admin sebagai co-author jika bukan pemilik artikel
+        if (isAdminEditingOthersArticle) {
+            const alreadyCoAuthor = article.coAuthors.some(co => co.userId === user.id);
+            if (!alreadyCoAuthor) {
+                await prisma.blogArticleCoAuthor.create({
+                    data: { articleId, userId: user.id }
+                });
+            }
+        }
+
+        let message = "Isi artikel berhasil diperbarui";
+        if (actionType === "review") message = "Artikel berhasil diajukan untuk direview.";
+        if (actionType === "publish") message = "Artikel berhasil dipublikasikan.";
+        if (actionType === "draft") message = "Draft berhasil disimpan.";
 
         revalidatePath(`/admin/blog/${articleId}/edit`);
         revalidatePath(`/tutor/blog/${articleId}/edit`);
-        return { success: true, message: "Isi artikel berhasil diperbarui" };
+        return { success: true, message };
     } catch (error) {
         console.error("Error updateArticleContentAction:", error);
         return { success: false, error: "Gagal memperbarui isi artikel." };
@@ -241,40 +254,6 @@ export async function updateArticleMetadataAction(
     }
 }
 
-/**
- * 4. Action Ajukan Review (Author Utama & Admin)
- * TSD §4.4: submitArticleForReview
- */
-export async function submitArticleForReviewAction(articleId: string): Promise<ActionResult> {
-    debugger;
-    const user = await getAuthenticatedUser();
-    if (!user) return { success: false, error: "Belum login." };
-
-    const access = await verifyBlogAccess(articleId, user.id, user.role);
-    if (!access.success) return { success: false, error: access.error };
-
-    if (!access.isAuthor) {
-        return { success: false, error: "Akses ditolak. Hanya Author Utama yang bisa mengajukan review." };
-    }
-
-    if (access.article?.status !== "draft") {
-        return { success: false, error: "Hanya artikel berstatus draft yang bisa diajukan." };
-    }
-
-    try {
-        await prisma.blogArticle.update({
-            where: { id: articleId },
-            data: { status: "pending_review", submittedAt: new Date() }
-        });
-
-        revalidatePath(`/admin/blog/${articleId}/edit`);
-        revalidatePath(`/tutor/blog/${articleId}/edit`);
-        return { success: true, message: "Artikel berhasil diajukan untuk direview." };
-    } catch (error) {
-        console.error(error);
-        return { success: false, error: "Gagal mengajukan review." };
-    }
-}
 
 /**
  * 5. Action Approve & Reject Artikel (Admin Only)

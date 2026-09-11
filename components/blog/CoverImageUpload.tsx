@@ -67,10 +67,6 @@ export default function CoverImageUpload({
 
     return (
         <div className="mt-2">
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-                Cover Image (Opsional)
-            </label>
-
             {fullImageUrl && (
                 <div className="mb-4 relative w-full max-w-sm aspect-video rounded-md overflow-hidden border border-slate-200">
                     <Image

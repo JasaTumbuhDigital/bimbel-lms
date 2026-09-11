@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { TableSkeleton } from "@/components/ui/skeletons";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { redirect } from "next/navigation";
+import CreateDraftButton from "@/components/blog/CreateDraftButton";
 
 export const metadata = {
     title: "Manajemen Blog - Tutor",
@@ -25,12 +26,7 @@ export default async function TutorBlogPage() {
                         <p className="text-xs text-slate-600">Kelola artikel yang kamu tulis</p>
                     </div>
                     <div>
-                        <Link
-                            href="/tutor/blog/new"
-                            className="bg-blue-600 text-white text-sm px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                        >
-                            + Tulis Artikel Baru
-                        </Link>
+                        <CreateDraftButton basePath="/tutor/blog" />
                     </div>
                 </header>
 
