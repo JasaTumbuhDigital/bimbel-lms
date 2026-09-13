@@ -106,7 +106,9 @@ export default function TagAutocomplete({ initialTags = [], onTagsChange }: TagA
             </div>
 
             {/* Input Hidden untuk Server Action */}
-            <input type="hidden" name="tags" value={tags.join(",")} />
+            {tags.map(tag => (
+                <input key={tag} type="hidden" name="tagNames" value={tag} />
+            ))}
 
             {isDropdownOpen && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">

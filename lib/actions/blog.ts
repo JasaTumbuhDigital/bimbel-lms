@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
-    createArticleSchema,
+    // createArticleSchema,
     updateArticleContentSchema,
     updateArticleMetadataSchema
 } from "@/lib/validations/blog";
@@ -71,7 +71,7 @@ export async function createEmptyDraftAction(): Promise<ActionResult<{ articleId
 
         revalidatePath("/admin/blog");
         revalidatePath("/tutor/blog");
-        
+
         return { success: true, message: "Draft berhasil dibuat", data: { articleId: newArticle.id, slug: newArticle.slug } };
     } catch (error) {
         console.error("Error createEmptyDraftAction:", error);
@@ -90,13 +90,16 @@ export async function updateArticleContentAction(
     const user = await getAuthenticatedUser();
     if (!user) return { success: false, error: "Belum login." };
 
+    const rawTagNames = formData.getAll("tagNames") as string[];
+
     const rawData = {
         articleId: formData.get("articleId") as string,
         title: formData.get("title") as string || undefined,
-        // TipTap JSON biasanya diubah jadi string saat dikirim via FormData
         content: formData.get("content") ? JSON.parse(formData.get("content") as string) : undefined,
         excerpt: formData.get("excerpt") as string || undefined,
         coverImageUrl: formData.get("coverImageUrl") as string || undefined,
+        categoryId: formData.get("categoryId") as string || undefined,
+        tagNames: rawTagNames.length > 0 ? rawTagNames.filter(Boolean) : undefined,
     };
 
     const validation = updateArticleContentSchema.safeParse(rawData);
@@ -104,7 +107,7 @@ export async function updateArticleContentAction(
         return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
     }
 
-    const { articleId, title, content, excerpt, coverImageUrl } = validation.data;
+    const { articleId, title, content, excerpt, coverImageUrl, categoryId, tagNames } = validation.data;
     const actionType = formData.get("actionType") as string;
 
     const access = await verifyBlogAccess(articleId, user.id, user.role);
@@ -133,28 +136,54 @@ export async function updateArticleContentAction(
     const isAdminEditingOthersArticle = user.role === "admin" && article.authorId !== user.id;
 
     try {
-        await prisma.blogArticle.update({
-            where: { id: articleId },
-            data: { 
-                title, 
-                content, 
-                excerpt, 
+        await prisma.$transaction(async (tx) => {
+            const updateData: any = {
+                title,
+                content,
+                excerpt,
                 coverImageUrl,
+                categoryId,
                 status: newStatus,
                 submittedAt,
-                publishedAt
+                publishedAt,
+            };
+
+            // Handle tag replacement jika tagNames dikirim
+            if (tagNames !== undefined) {
+                await tx.blogArticleTag.deleteMany({ where: { articleId } });
+                if (tagNames.length > 0) {
+                    updateData.tags = {
+                        create: tagNames.map(name => {
+                            const tagName = name.trim();
+                            const tagSlug = generateSlug(tagName);
+                            return {
+                                tag: {
+                                    connectOrCreate: {
+                                        where: { name: tagName },
+                                        create: { name: tagName, slug: tagSlug }
+                                    }
+                                }
+                            };
+                        })
+                    };
+                }
+            }
+
+            await tx.blogArticle.update({
+                where: { id: articleId },
+                data: updateData
+            });
+
+            // Tambahkan admin sebagai co-author jika bukan pemilik artikel
+            if (isAdminEditingOthersArticle) {
+                const alreadyCoAuthor = article.coAuthors.some(co => co.userId === user.id);
+                if (!alreadyCoAuthor) {
+                    await tx.blogArticleCoAuthor.create({
+                        data: { articleId, userId: user.id }
+                    });
+                }
             }
         });
-
-        // Tambahkan admin sebagai co-author jika bukan pemilik artikel
-        if (isAdminEditingOthersArticle) {
-            const alreadyCoAuthor = article.coAuthors.some(co => co.userId === user.id);
-            if (!alreadyCoAuthor) {
-                await prisma.blogArticleCoAuthor.create({
-                    data: { articleId, userId: user.id }
-                });
-            }
-        }
 
         let message = "Isi artikel berhasil diperbarui";
         if (actionType === "review") message = "Artikel berhasil diajukan untuk direview.";
@@ -181,13 +210,9 @@ export async function updateArticleMetadataAction(
     const user = await getAuthenticatedUser();
     if (!user) return { success: false, error: "Belum login." };
 
-    const rawTagNames = formData.getAll("tagNames") as string[];
-
     const rawData = {
         articleId: formData.get("articleId") as string,
         slug: formData.get("slug") as string || undefined,
-        categoryId: formData.get("categoryId") as string || undefined,
-        tagNames: rawTagNames.length > 0 ? rawTagNames.filter(Boolean) : undefined,
         seoTitle: formData.get("seoTitle") as string || undefined,
         seoDescription: formData.get("seoDescription") as string || undefined,
         seoImageUrl: formData.get("seoImageUrl") as string || undefined,
@@ -198,7 +223,7 @@ export async function updateArticleMetadataAction(
         return { success: false, error: "Validasi gagal", fieldErrors: validation.error.flatten().fieldErrors };
     }
 
-    const { articleId, slug, categoryId, tagNames, seoTitle, seoDescription, seoImageUrl } = validation.data;
+    const { articleId, slug, seoTitle, seoDescription, seoImageUrl } = validation.data;
 
     const access = await verifyBlogAccess(articleId, user.id, user.role);
     if (!access.success) return { success: false, error: access.error };
@@ -214,46 +239,19 @@ export async function updateArticleMetadataAction(
             if (existing) return { success: false, error: "Slug sudah digunakan oleh artikel lain." };
         }
 
-        await prisma.$transaction(async (tx) => {
-            const updateData: any = { slug, categoryId, seoTitle, seoDescription, seoImageUrl };
-
-            // Jika tagNames dikirim ulang, kita replace seluruh relasi tag-nya
-            if (tagNames) {
-                await tx.blogArticleTag.deleteMany({ where: { articleId } });
-
-                if (tagNames.length > 0) {
-                    updateData.tags = {
-                        create: tagNames.map(name => {
-                            const tagName = name.trim();
-                            const tagSlug = generateSlug(tagName);
-                            return {
-                                tag: {
-                                    connectOrCreate: {
-                                        where: { name: tagName },
-                                        create: { name: tagName, slug: tagSlug }
-                                    }
-                                }
-                            };
-                        })
-                    };
-                }
-            }
-
-            await tx.blogArticle.update({
-                where: { id: articleId },
-                data: updateData
-            });
+        await prisma.blogArticle.update({
+            where: { id: articleId },
+            data: { slug, seoTitle, seoDescription, seoImageUrl }
         });
 
         revalidatePath(`/admin/blog/${articleId}/edit`);
         revalidatePath(`/tutor/blog/${articleId}/edit`);
-        return { success: true, message: "Metadata artikel berhasil diperbarui" };
+        return { success: true, message: "SEO metadata berhasil diperbarui" };
     } catch (error) {
         console.error("Error updateArticleMetadataAction:", error);
-        return { success: false, error: "Gagal memperbarui metadata artikel." };
+        return { success: false, error: "Gagal memperbarui SEO metadata." };
     }
 }
-
 
 /**
  * 5. Action Approve & Reject Artikel (Admin Only)

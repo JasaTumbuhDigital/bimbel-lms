@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition, useEffect, useRef } from "react";
 import TipTapEditor from "./TipTapEditor";
 import CoverImageUpload from "./CoverImageUpload";
+import TagAutocomplete from "./TagAutocomplete";
 import ArticleMetadataSidebar from "./ArticleMetadataSidebar";
 import ArticleFormActions from "./ArticleFormActions";
 import AdminReviewCard from "./AdminReviewCard";
@@ -33,6 +34,9 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
     const [coverImageUrl, setCoverImageUrl] = useState(article.coverImageUrl || "");
     const [title, setTitle] = useState(article.title || "");
     const [excerpt, setExcerpt] = useState(article.excerpt || "");
+    const [categoryId, setCategoryId] = useState(article.categoryId || "");
+    const initialTagsList = article.tags?.map((t: any) => t.tag.name) || [];
+    const [tags, setTags] = useState<string[]>(initialTagsList);
 
     // Track which button was clicked to show spinner only on that button
     const [activeBtn, setActiveBtn] = useState<string | null>(null);
@@ -43,13 +47,17 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
         content: JSON.stringify(article.content || {}),
         cover: article.coverImageUrl || "",
         excerpt: article.excerpt || "",
+        categoryId: article.categoryId || "",
+        tags: JSON.stringify(initialTagsList.slice().sort()),
     });
 
     const isDirty =
         title !== baseline.current.title ||
         JSON.stringify(contentJson) !== baseline.current.content ||
         coverImageUrl !== baseline.current.cover ||
-        excerpt !== baseline.current.excerpt;
+        excerpt !== baseline.current.excerpt ||
+        categoryId !== baseline.current.categoryId ||
+        JSON.stringify(tags.slice().sort()) !== baseline.current.tags;
 
     // Server action state for content
     const [contentState, contentAction, isContentPending] = useActionState<ActionResult, FormData>(
@@ -75,6 +83,8 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                 content: JSON.stringify(contentJson),
                 cover: coverImageUrl,
                 excerpt,
+                categoryId,
+                tags: JSON.stringify(tags.slice().sort()),
             };
         } else if (contentState.error) {
             toast.error(contentState.error);
@@ -116,8 +126,8 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                                 )}
                             </h2>
                             <span className={`px-3 py-1 text-xs font-bold rounded-full ${article.status === 'published' ? 'bg-green-100 text-green-800' :
-                                    article.status === 'pending_review' ? 'bg-amber-100 text-amber-800' :
-                                        'bg-slate-100 text-slate-800'
+                                article.status === 'pending_review' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-slate-100 text-slate-800'
                                 }`}>
                                 {article.status.replace("_", " ").toUpperCase()}
                             </span>
@@ -126,6 +136,7 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                         <input type="hidden" name="articleId" value={article.id} />
                         <input type="hidden" name="content" value={JSON.stringify(contentJson)} />
                         <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
+                        <input type="hidden" name="categoryId" value={categoryId} />
 
                         {/* Title Input */}
                         <div>
@@ -176,6 +187,29 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                             />
                         </div>
 
+                        {/* Kategori & Tags */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
+                                <select
+                                    value={categoryId}
+                                    onChange={e => setCategoryId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="">-- Pilih Kategori --</option>
+                                    {categories.map((cat: any) => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
+                                <TagAutocomplete
+                                    initialTags={initialTagsList}
+                                    onTagsChange={(newTags) => setTags(newTags)}
+                                />
+                            </div>
+                        </div>
                         {/* Action Buttons */}
                         <ArticleFormActions
                             status={article.status}
@@ -210,7 +244,6 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                 {/* Sidebar Metadata & SEO */}
                 <ArticleMetadataSidebar
                     article={article}
-                    categories={categories}
                     canEditMetadata={canEditMetadata}
                 />
             </div>

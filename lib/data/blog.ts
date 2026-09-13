@@ -51,12 +51,23 @@ export async function getArticleBySlugForPublic(slug: string) {
  * TSD §4.10
  */
 export async function getArticleListForManagement(userId: string, role: string) {
-    const where: any = {};
+    let where: any = {};
 
-    if (role !== "admin") {
+    if (role === "admin") {
+        // Admin melihat:
+        // 1. Semua artikel yang sudah published
+        // 2. Draft milik sendiri (sebagai author utama ATAU co-author)
+        // Draft orang lain TIDAK ditampilkan di sini.
+        where.OR = [
+            { status: "published" },
+            { status: "draft", authorId: userId },
+            { status: "draft", coAuthors: { some: { userId } } },
+        ];
+    } else {
+        // Tutor hanya melihat artikel miliknya sendiri (author utama atau co-author)
         where.OR = [
             { authorId: userId },
-            { coAuthors: { some: { userId } } }
+            { coAuthors: { some: { userId } } },
         ];
     }
 

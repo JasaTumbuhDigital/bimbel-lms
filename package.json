@@ -18,7 +18,9 @@
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "@tiptap/extension-image": "^3.31.3",
-    "@tiptap/html": "^3.31.3",
+    "@tiptap/extension-subscript": "^3.31.3",
+    "@tiptap/extension-superscript": "^3.31.3",
+    "@tiptap/extension-text-align": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
@@ -29,6 +31,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sonner": "^2.0.8",
+    "tiptap-extension-resize-image": "^1.4.7",
     "zod": "^4.5.4"
   },
   "devDependencies": {
