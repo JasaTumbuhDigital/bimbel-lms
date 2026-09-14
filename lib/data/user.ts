@@ -20,6 +20,28 @@ export async function getTutorsForSelect() {
 }
 
 /**
+ * Fetch Tutor & Admin users selection (hanya id dan name untuk efisiensi)
+ */
+export async function getTutorsForBlogSelect() {
+    try {
+        return await prisma.user.findMany({
+            where: {
+                role: { in: ["tutor", "admin"] },
+                isActive: true,
+            },
+            select: {
+                id: true,
+                name: true,
+            },
+            orderBy: { name: "asc" }
+        });
+    } catch (error) {
+        console.error("Gagal mengambil daftar tutor untuk blog:", error);
+        return [];
+    }
+}
+
+/**
  * Fetch daftar user berdasarkan role, dengan search & filter (Admin Only)
  */
 export async function listUsers(params: {

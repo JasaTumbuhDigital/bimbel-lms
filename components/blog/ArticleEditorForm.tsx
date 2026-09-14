@@ -4,7 +4,9 @@ import { useActionState, useState, useTransition, useEffect, useRef } from "reac
 import TipTapEditor from "./TipTapEditor";
 import CoverImageUpload from "./CoverImageUpload";
 import TagAutocomplete from "./TagAutocomplete";
+import Select from "@/components/ui/Select";
 import ArticleMetadataSidebar from "./ArticleMetadataSidebar";
+import CoAuthorManager from "./CoAuthorManager";
 import ArticleFormActions from "./ArticleFormActions";
 import AdminReviewCard from "./AdminReviewCard";
 import ArticleReviewBanner from "./ArticleReviewBanner";
@@ -14,20 +16,30 @@ import {
 } from "@/lib/actions/blog";
 import { ActionResult } from "@/types/action";
 import { useRouter } from "next/navigation";
-import { Save } from "lucide-react";
+import { Save, Info } from "lucide-react";
 import { toast } from "sonner";
 
 interface ArticleEditorFormProps {
     article: any;
     categories: any[];
+    availableTutors?: Array<{ id: string; name: string }>;
     role: "admin" | "tutor" | "co_author";
     isMainAuthor: boolean;
 }
 
-export default function ArticleEditorForm({ article, categories, role, isMainAuthor }: ArticleEditorFormProps) {
+export default function ArticleEditorForm({
+    article,
+    categories,
+    availableTutors = [],
+    role,
+    isMainAuthor,
+}: ArticleEditorFormProps) {
     const router = useRouter();
     const canEditMetadata = role === "admin" || isMainAuthor;
     const canPublish = role === "admin";
+    const isCoAuthor = !canEditMetadata;
+    const isCoAuthorReadOnly = isCoAuthor && article.status !== "draft";
+    const canEditContent = !isCoAuthorReadOnly;
 
     // Form content states
     const [contentJson, setContentJson] = useState<any>(article.content || {});
@@ -133,6 +145,18 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                             </span>
                         </div>
 
+                        {isCoAuthorReadOnly && (
+                            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-start gap-3 text-sm">
+                                <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-semibold block mb-0.5">Mode Baca Saja (Read-Only)</span>
+                                    {article.status === "published"
+                                        ? "Artikel ini sudah dipublikasikan. Sebagai Co-Author, Anda hanya dapat melihat konten artikel. Revisi pada artikel yang telah terbit hanya dapat dilakukan oleh Penulis Utama atau Admin."
+                                        : "Artikel ini sedang dalam proses peninjauan (Pending Review). Sebagai Co-Author, Anda hanya dapat mengedit artikel saat statusnya masih berupa draft."}
+                                </div>
+                            </div>
+                        )}
+
                         <input type="hidden" name="articleId" value={article.id} />
                         <input type="hidden" name="content" value={JSON.stringify(contentJson)} />
                         <input type="hidden" name="coverImageUrl" value={coverImageUrl} />
@@ -147,7 +171,8 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
                                 required
-                                className="w-full text-lg font-semibold px-4 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                disabled={!canEditContent}
+                                className="w-full text-lg font-semibold px-4 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                                 placeholder="Masukkan judul artikel..."
                             />
                         </div>
@@ -159,6 +184,7 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                                 articleId={article.id}
                                 currentCoverUrl={coverImageUrl}
                                 onUploadSuccess={(url) => setCoverImageUrl(url)}
+                                disabled={!canEditContent}
                             />
                         </div>
 
@@ -170,6 +196,7 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                                     articleId={article.id}
                                     content={contentJson}
                                     onChange={(json) => setContentJson(json)}
+                                    editable={canEditContent}
                                 />
                             </div>
                         </div>
@@ -182,7 +209,8 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                                 value={excerpt}
                                 onChange={e => setExcerpt(e.target.value)}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                disabled={!canEditContent}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                                 placeholder="Ringkasan singkat untuk ditampilkan di card artikel..."
                             />
                         </div>
@@ -191,22 +219,24 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori</label>
-                                <select
+                                <Select
+                                    options={categories.map((cat: any) => ({
+                                        value: cat.id,
+                                        label: cat.name,
+                                    }))}
                                     value={categoryId}
-                                    onChange={e => setCategoryId(e.target.value)}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">-- Pilih Kategori --</option>
-                                    {categories.map((cat: any) => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
+                                    onChange={(id) => setCategoryId(id)}
+                                    placeholder="-- Pilih Kategori --"
+                                    clearLabel="-- Tanpa Kategori --"
+                                    disabled={!canEditMetadata || !canEditContent}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Tags</label>
                                 <TagAutocomplete
                                     initialTags={initialTagsList}
                                     onTagsChange={(newTags) => setTags(newTags)}
+                                    disabled={!canEditMetadata || !canEditContent}
                                 />
                             </div>
                         </div>
@@ -241,11 +271,21 @@ export default function ArticleEditorForm({ article, categories, role, isMainAut
                     )}
                 </div>
 
-                {/* Sidebar Metadata & SEO */}
-                <ArticleMetadataSidebar
-                    article={article}
-                    canEditMetadata={canEditMetadata}
-                />
+                {/* Sidebar Metadata, SEO & Co-Author */}
+                <div className="space-y-6">
+                    <ArticleMetadataSidebar
+                        article={article}
+                        canEditMetadata={canEditMetadata}
+                    />
+
+                    <CoAuthorManager
+                        articleId={article.id}
+                        mainAuthor={article.author || { id: article.authorId, name: "Penulis Utama" }}
+                        coAuthors={article.coAuthors || []}
+                        availableTutors={availableTutors}
+                        canManage={canEditMetadata}
+                    />
+                </div>
             </div>
         </div>
     );

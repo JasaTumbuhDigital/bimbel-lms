@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import {
     // createArticleSchema,
     updateArticleContentSchema,
-    updateArticleMetadataSchema
+    updateArticleMetadataSchema,
+    createBlogCategorySchema,
+    updateBlogCategorySchema,
 } from "@/lib/validations/blog";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { ActionResult } from "@/types/action";
@@ -113,6 +115,14 @@ export async function updateArticleContentAction(
     const access = await verifyBlogAccess(articleId, user.id, user.role);
     if (!access.success) return { success: false, error: access.error };
 
+    // Guard clause: Co-Author HANYA boleh mengubah artikel saat status masih "draft"
+    if (!access.isAuthor && access.article?.status !== "draft") {
+        return {
+            success: false,
+            error: "Akses ditolak. Co-Author hanya dapat mengedit artikel saat masih berstatus draft.",
+        };
+    }
+
     // Proses perubahan status jika ada actionType dan user berhak (Author Utama/Admin)
     let newStatus = access.article?.status;
     let submittedAt = access.article?.submittedAt;
@@ -142,30 +152,36 @@ export async function updateArticleContentAction(
                 content,
                 excerpt,
                 coverImageUrl,
-                categoryId,
                 status: newStatus,
                 submittedAt,
                 publishedAt,
             };
 
-            // Handle tag replacement jika tagNames dikirim
-            if (tagNames !== undefined) {
-                await tx.blogArticleTag.deleteMany({ where: { articleId } });
-                if (tagNames.length > 0) {
-                    updateData.tags = {
-                        create: tagNames.map(name => {
-                            const tagName = name.trim();
-                            const tagSlug = generateSlug(tagName);
-                            return {
-                                tag: {
-                                    connectOrCreate: {
-                                        where: { name: tagName },
-                                        create: { name: tagName, slug: tagSlug }
+            // Kategori dan tag hanya boleh dimodifikasi oleh Author Utama atau Admin
+            if (access.isAuthor) {
+                if (categoryId !== undefined) {
+                    updateData.categoryId = categoryId;
+                }
+
+                // Handle tag replacement jika tagNames dikirim
+                if (tagNames !== undefined) {
+                    await tx.blogArticleTag.deleteMany({ where: { articleId } });
+                    if (tagNames.length > 0) {
+                        updateData.tags = {
+                            create: tagNames.map(name => {
+                                const tagName = name.trim();
+                                const tagSlug = generateSlug(tagName);
+                                return {
+                                    tag: {
+                                        connectOrCreate: {
+                                            where: { name: tagName },
+                                            create: { name: tagName, slug: tagSlug }
+                                        }
                                     }
-                                }
-                            };
-                        })
-                    };
+                                };
+                            })
+                        };
+                    }
                 }
             }
 
@@ -439,10 +455,20 @@ export async function createBlogCategoryAction(
     const user = await getAuthenticatedUser();
     if (!user || user.role !== "admin") return { success: false, error: "Hanya admin yang bisa menambah kategori." };
 
-    const name = formData.get("name") as string;
+    const rawData = {
+        name: formData.get("name") as string,
+    };
 
-    if (!name || name.length < 2) return { success: false, error: "Nama kategori minimal 2 karakter." };
+    const validation = createBlogCategorySchema.safeParse(rawData);
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.issues[0]?.message || "Validasi gagal",
+            fieldErrors: validation.error.flatten().fieldErrors,
+        };
+    }
 
+    const { name } = validation.data;
     const slug = generateSlug(name);
 
     try {
@@ -452,6 +478,37 @@ export async function createBlogCategoryAction(
     } catch (error) {
         console.error(error);
         return { success: false, error: "Gagal membuat kategori. Mungkin nama sudah terpakai." };
+    }
+}
+
+export async function updateBlogCategoryAction(
+    id: string,
+    name: string
+): Promise<ActionResult> {
+    const user = await getAuthenticatedUser();
+    if (!user || user.role !== "admin") return { success: false, error: "Hanya admin yang bisa memperbarui kategori." };
+
+    const validation = updateBlogCategorySchema.safeParse({ id, name });
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.issues[0]?.message || "Validasi gagal",
+            fieldErrors: validation.error.flatten().fieldErrors,
+        };
+    }
+
+    const slug = generateSlug(validation.data.name);
+
+    try {
+        await prisma.blogCategory.update({
+            where: { id: validation.data.id },
+            data: { name: validation.data.name, slug },
+        });
+        revalidatePath("/admin/blog/categories");
+        return { success: true, message: "Kategori berhasil diperbarui." };
+    } catch (error) {
+        console.error(error);
+        return { success: false, error: "Gagal memperbarui kategori. Mungkin nama sudah terpakai." };
     }
 }
 

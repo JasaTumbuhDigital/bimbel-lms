@@ -32,8 +32,8 @@ export default function ArticleFormActions({
 
     return (
         <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t">
-            {/* ── CO-AUTHOR: hanya bisa simpan jika ada perubahan ── */}
-            {!canEditMetadata && (
+            {/* ── CO-AUTHOR: status DRAFT ── */}
+            {!canEditMetadata && status === "draft" && (
                 <button
                     type="submit"
                     onClick={() => setActiveBtn("save")}
@@ -43,6 +43,15 @@ export default function ArticleFormActions({
                     {isContentPending && activeBtn === "save" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Simpan Perubahan
                 </button>
+            )}
+
+            {/* ── CO-AUTHOR: status PENDING_REVIEW / PUBLISHED (Read Only) ── */}
+            {!canEditMetadata && status !== "draft" && (
+                <div className="text-xs text-slate-500 italic bg-slate-100 px-3.5 py-2 rounded-md border border-slate-200">
+                    {status === "published"
+                        ? "Artikel sudah dipublikasikan. Hanya Author Utama dan Admin yang dapat melakukan revisi."
+                        : "Artikel sedang dalam proses review. Co-Author hanya dapat mengedit saat berstatus draft."}
+                </div>
             )}
 
             {/* ── ADMIN: status DRAFT ── */}

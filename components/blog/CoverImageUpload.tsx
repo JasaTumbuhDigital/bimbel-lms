@@ -11,11 +11,13 @@ const STORAGE_BUCKET = institutionConfig.shortName.toLowerCase();
 export default function CoverImageUpload({
     articleId,
     currentCoverUrl,
-    onUploadSuccess
+    onUploadSuccess,
+    disabled = false,
 }: {
     articleId: string;
     currentCoverUrl?: string;
     onUploadSuccess: (path: string) => void;
+    disabled?: boolean;
 }) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState("");
@@ -80,18 +82,20 @@ export default function CoverImageUpload({
                 </div>
             )}
 
-            <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleFileChange}
-                disabled={isUploading}
-                className="block w-full text-sm text-slate-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-md file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100 disabled:opacity-50"
-            />
+            {!disabled && (
+                <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    className="block w-full text-sm text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100 disabled:opacity-50"
+                />
+            )}
             {isUploading && <p className="text-sm text-blue-600 mt-1">Mengunggah gambar...</p>}
             {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
         </div>

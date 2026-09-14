@@ -5,6 +5,7 @@ import { TableSkeleton } from "@/components/ui/skeletons";
 import { getAuthenticatedUser } from "@/lib/data/auth";
 import { redirect } from "next/navigation";
 import CreateDraftButton from "@/components/blog/CreateDraftButton";
+import DeleteArticleButton from "@/components/blog/DeleteArticleButton";
 
 export const metadata = {
     title: "Manajemen Blog - Tutor",
@@ -89,13 +90,20 @@ async function ArticleTable() {
                                         day: "numeric", month: "short", year: "numeric"
                                     })}
                                 </td>
-                                <td className="py-3 px-4 flex justify-end gap-3 items-center">
+                                <td className="py-3 px-4 flex justify-end gap-2 items-center">
                                     <Link
                                         href={`/tutor/blog/${article.id}/edit`}
-                                        className="text-blue-600 hover:text-blue-900 text-xs font-medium hover:underline"
+                                        className="text-blue-600 hover:text-blue-900 text-xs font-medium hover:underline px-1.5 py-1"
                                     >
                                         Edit
                                     </Link>
+                                    {article.authorId === user.id && (
+                                        <DeleteArticleButton
+                                            articleId={article.id}
+                                            articleTitle={article.title}
+                                            variant="icon"
+                                        />
+                                    )}
                                 </td>
                             </tr>
                         ))

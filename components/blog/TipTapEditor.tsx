@@ -113,6 +113,12 @@ export default function TipTapEditor({
         },
     });
 
+    useEffect(() => {
+        if (editor && editor.isEditable !== editable) {
+            editor.setEditable(editable);
+        }
+    }, [editor, editable]);
+
     const handleSetLink = () => {
         if (!editor) return;
         const previousUrl = editor.getAttributes("link").href;

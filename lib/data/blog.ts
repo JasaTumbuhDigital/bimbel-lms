@@ -102,6 +102,11 @@ export async function getReviewQueueForAdmin() {
  */
 export async function getBlogCategories() {
     return prisma.blogCategory.findMany({
+        include: {
+            _count: {
+                select: { articles: true }
+            }
+        },
         orderBy: { name: "asc" }
     });
 }
@@ -110,6 +115,7 @@ export async function getArticleByIdForManagement(articleId: string) {
     return prisma.blogArticle.findUnique({
         where: { id: articleId },
         include: {
+            author: { select: { id: true, name: true, email: true } },
             category: true,
             tags: { include: { tag: true } },
             coAuthors: { include: { user: { select: { id: true, name: true, email: true, role: true } } } }

@@ -11,9 +11,10 @@ interface Tag {
 interface TagAutocompleteProps {
     initialTags?: string[];
     onTagsChange: (tags: string[]) => void;
+    disabled?: boolean;
 }
 
-export default function TagAutocomplete({ initialTags = [], onTagsChange }: TagAutocompleteProps) {
+export default function TagAutocomplete({ initialTags = [], onTagsChange, disabled = false }: TagAutocompleteProps) {
     const [tags, setTags] = useState<string[]>(initialTags);
     const [inputValue, setInputValue] = useState("");
     const [suggestions, setSuggestions] = useState<Tag[]>([]);
@@ -77,32 +78,38 @@ export default function TagAutocomplete({ initialTags = [], onTagsChange }: TagA
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <div className="flex flex-wrap gap-2 p-2 border border-slate-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+            <div className={`flex flex-wrap gap-2 p-2 border border-slate-300 rounded-md bg-white ${
+                disabled ? "bg-slate-50 opacity-80 cursor-not-allowed" : "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+            }`}>
                 {tags.map(tag => (
                     <span key={tag} className="flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-md">
                         {tag}
-                        <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="text-blue-600 hover:text-blue-800 font-bold"
-                        >
-                            &times;
-                        </button>
+                        {!disabled && (
+                            <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                className="text-blue-600 hover:text-blue-800 font-bold"
+                            >
+                                &times;
+                            </button>
+                        )}
                     </span>
                 ))}
-                <input
-                    type="text"
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder={tags.length === 0 ? "Ketik lalu tekan Enter atau koma" : ""}
-                    className="flex-1 min-w-30 outline-none text-sm bg-transparent"
-                    onFocus={() => {
-                        if (inputValue.trim().length > 0) {
-                            fetchSuggestions(inputValue);
-                        }
-                    }}
-                />
+                {!disabled && (
+                    <input
+                        type="text"
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder={tags.length === 0 ? "Ketik lalu tekan Enter atau koma" : ""}
+                        className="flex-1 min-w-30 outline-none text-sm bg-transparent"
+                        onFocus={() => {
+                            if (inputValue.trim().length > 0) {
+                                fetchSuggestions(inputValue);
+                            }
+                        }}
+                    />
+                )}
             </div>
 
             {/* Input Hidden untuk Server Action */}
