@@ -48,6 +48,19 @@ export default function TutorDashboardPage() {
                             Lihat dan pratinjau materi seluruh kursus dalam platform secara read-only.
                         </p>
                     </Link>
+
+                    {/* Card 3: Artikel Blog Saya */}
+                    <Link
+                        href="/tutor/blog"
+                        className="block p-6 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+                    >
+                        <h2 className="text-base font-semibold text-slate-900 mb-1">
+                            Artikel Blog Saya &rarr;
+                        </h2>
+                        <p className="text-xs text-slate-600">
+                            Tulis artikel edukatif, submit untuk direview, dan kelola karya tulis Anda.
+                        </p>
+                    </Link>
                 </section>
             </div>
         </div>

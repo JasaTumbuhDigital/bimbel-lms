@@ -24,9 +24,11 @@ model User {
     mustChangePassword Boolean  @default(true) @map("must_change_password")
     createdAt          DateTime @default(now()) @map("created_at")
 
-    studentProfile StudentProfile?
-    tutorProfile   TutorProfile?
-    adminProfile   AdminProfile?
+    studentProfile       StudentProfile?
+    tutorProfile         TutorProfile?
+    adminProfile         AdminProfile?
+    blogArticles         BlogArticle[]         @relation("BlogArticleAuthor")
+    blogArticleCoAuthors BlogArticleCoAuthor[] @relation("BlogArticleCoAuthor")
 
     @@index([role])
     @@map("users")
@@ -272,4 +274,79 @@ model Review {
 
     @@unique([studentId, courseId])
     @@map("reviews")
+}
+
+enum ArticleStatus {
+    draft
+    pending_review
+    published
+}
+
+model BlogCategory {
+    id   String @id @default(uuid())
+    name String @unique
+    slug String @unique
+
+    articles BlogArticle[]
+
+    @@map("blog_categories")
+}
+
+model BlogTag {
+    id   String @id @default(uuid())
+    name String @unique
+    slug String @unique
+
+    articles BlogArticleTag[]
+
+    @@map("blog_tags")
+}
+
+model BlogArticle {
+    id             String        @id @default(uuid())
+    title          String
+    slug           String        @unique
+    content        Json // dokumen TipTap, BUKAN string Markdown/HTML
+    excerpt        String? // ringkasan singkat untuk card listing
+    coverImageUrl  String?       @map("cover_image_url")
+    categoryId     String?       @map("category_id")
+    authorId       String        @map("author_id") // "Author Utama" — users.id, role admin ATAU tutor
+    status         ArticleStatus @default(draft)
+    publishedAt    DateTime?     @map("published_at")
+    submittedAt    DateTime?     @map("submitted_at") // kapan terakhir diajukan review
+    reviewNote     String?       @map("review_note") // feedback admin saat reject
+    seoTitle       String?       @map("seo_title")
+    seoDescription String?       @map("seo_description")
+    seoImageUrl    String?       @map("seo_image_url")
+    createdAt      DateTime      @default(now()) @map("created_at")
+    updatedAt      DateTime      @updatedAt @map("updated_at")
+
+    category  BlogCategory?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+    author    User                  @relation("BlogArticleAuthor", fields: [authorId], references: [id])
+    coAuthors BlogArticleCoAuthor[]
+    tags      BlogArticleTag[]
+
+    @@map("blog_articles")
+}
+
+model BlogArticleCoAuthor {
+    articleId String @map("article_id")
+    userId    String @map("user_id")
+
+    article BlogArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+    user    User        @relation("BlogArticleCoAuthor", fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([articleId, userId])
+    @@map("blog_article_co_authors")
+}
+
+model BlogArticleTag {
+    articleId String @map("article_id")
+    tagId     String @map("tag_id")
+
+    article BlogArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+    tag     BlogTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+    @@id([articleId, tagId])
+    @@map("blog_article_tags")
 }

@@ -1,8 +1,10 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,15 +14,76 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ========================================================
+   Tiptap & Prose Custom Styling (Code & Image)
+   ======================================================== */
+
+/* 1. Hilangkan kutip backtick bawaan Tailwind Typography */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: "" !important;
+}
+
+/* 2. Styling Inline Code: Format Badge Rapi ala GitHub / Notion (Netral) */
+.prose :where(code):not(:where(pre code, [class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: #f1f5f9 !important;
+  /* bg-slate-100 */
+  color: #1e293b !important;
+  /* text-slate-800 (netral, bukan merah) */
+  font-weight: 600 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.85em !important;
+  padding: 0.2rem 0.45rem !important;
+  border-radius: 0.375rem !important;
+  border: 1px solid #cbd5e1 !important;
+  /* border-slate-300 */
+  box-decoration-break: clone !important;
+  -webkit-box-decoration-break: clone !important;
+}
+
+/* 3. Styling Code Block: Clean Minimalist Gray (Senada dengan form) */
+.prose :where(pre):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: #f8fafc !important;
+  /* bg-slate-50 lembut */
+  color: #0f172a !important;
+  /* text-slate-900 */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 0.875rem !important;
+  line-height: 1.7 !important;
+  padding: 1.25rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #cbd5e1 !important;
+  /* border-slate-300 */
+  overflow-x: auto !important;
+  margin: 1.5rem 0 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.prose :where(pre code):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: 500 !important;
+}
+
+/* 4. Indikator Gambar saat Terpilih: Muncul Ring Biru */
+.tiptap .ProseMirror-selectednode,
+.tiptap img.ProseMirror-selectednode {
+  outline: 3px solid #3b82f6 !important;
+  outline-offset: 3px !important;
+  border-radius: 0.5rem !important;
+}
+
+/* 5. Image Wrapper & Alignment in Article View */
+.article-image-container img {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
