@@ -107,7 +107,7 @@ export default function TipTapEditor({
         },
         editorProps: {
             attributes: {
-                class: "prose prose-slate max-w-none min-h-[350px] p-4 focus:outline-none",
+                class: "prose prose-slate max-w-none min-h-full p-6 focus:outline-none",
                 spellcheck: "false",
             },
         },
@@ -187,9 +187,9 @@ export default function TipTapEditor({
         }`;
 
     return (
-        <div className="border border-slate-300 rounded-lg overflow-hidden bg-white shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500">
+        <div className="border border-slate-300 rounded-lg overflow-hidden bg-white shadow-sm focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 flex flex-col h-187.5 max-h-[85vh]">
             {editable && (
-                <div className="bg-zinc-900 border-b border-zinc-800 px-3 py-1.5 flex flex-wrap gap-1 items-center text-zinc-300 select-none">
+                <div className="shrink-0 bg-zinc-900 border-b border-zinc-800 px-4 py-2 flex flex-wrap gap-1 items-center justify-center text-zinc-300 select-none sticky top-0 z-20">
                     {/* Grup 1: Undo & Redo */}
                     <button
                         type="button"
@@ -281,8 +281,8 @@ export default function TipTapEditor({
                             type="button"
                             onClick={() => setIsListDropdownOpen(!isListDropdownOpen)}
                             className={`px-1.5 py-1 rounded flex items-center gap-1 text-xs hover:bg-zinc-800 ${editor.isActive("bulletList") || editor.isActive("orderedList")
-                                    ? "bg-zinc-700 text-white"
-                                    : "text-zinc-400 hover:text-white"
+                                ? "bg-zinc-700 text-white"
+                                : "text-zinc-400 hover:text-white"
                                 }`}
                             title="Format Daftar (List)"
                         >
@@ -473,7 +473,16 @@ export default function TipTapEditor({
                 </div>
             )}
 
-            <EditorContent editor={editor} />
+            <div
+                className="flex-1 overflow-y-auto min-h-0 bg-white cursor-text"
+                onClick={() => {
+                    if (editor && !editor.isFocused) {
+                        editor.commands.focus();
+                    }
+                }}
+            >
+                <EditorContent editor={editor} className="min-h-full" />
+            </div>
         </div>
     );
 }

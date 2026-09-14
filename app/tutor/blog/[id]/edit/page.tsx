@@ -45,33 +45,23 @@ export default async function TutorEditArticlePage({ params }: PageProps) {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
             <div className="max-w-7xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/tutor/blog"
-                            className="p-2 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
-                        >
-                            <ChevronLeft className="w-5 h-5 text-slate-600" />
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-900">
-                                {effectiveRole === "co_author" ? "Edit Konten Artikel" : "Edit Artikel"}
-                            </h1>
-                            <p className="text-sm text-slate-500">
-                                {effectiveRole === "co_author"
-                                    ? "Anda diundang sebagai Co-Author. Anda hanya dapat mengubah isi konten."
-                                    : "Membangun konten dan mengatur metadata SEO."}
-                            </p>
-                        </div>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/tutor/blog"
+                        className="p-2 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-colors"
+                    >
+                        <ChevronLeft className="w-5 h-5 text-slate-600" />
+                    </Link>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">
+                            {effectiveRole === "co_author" ? "Edit Konten Artikel" : "Edit Artikel"}
+                        </h1>
+                        <p className="text-sm text-slate-500">
+                            {effectiveRole === "co_author"
+                                ? "Anda diundang sebagai Co-Author. Anda hanya dapat mengubah isi konten."
+                                : "Membangun konten dan mengatur metadata SEO."}
+                        </p>
                     </div>
-                    {isMainAuthor && (
-                        <DeleteArticleButton
-                            articleId={article.id}
-                            articleTitle={article.title}
-                            variant="button"
-                            redirectOnSuccess="/tutor/blog"
-                        />
-                    )}
                 </div>
 
                 <ArticleEditorForm
@@ -81,6 +71,23 @@ export default async function TutorEditArticlePage({ params }: PageProps) {
                     role={effectiveRole}
                     isMainAuthor={isMainAuthor}
                 />
+
+                {isMainAuthor && (
+                    <div className="bg-white border border-red-200 rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                        <div>
+                            <h4 className="text-sm font-bold text-red-700">Hapus Artikel Ini</h4>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Artikel dan seluruh data terkait akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+                            </p>
+                        </div>
+                        <DeleteArticleButton
+                            articleId={article.id}
+                            articleTitle={article.title}
+                            variant="button"
+                            redirectOnSuccess="/tutor/blog"
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -32,11 +32,12 @@ export async function getArticleListForPublic(options?: { categorySlug?: string,
 }
 
 /**
- * 1b. Query Artikel Detail (Publik)
+ * 1b. Query Artikel Detail (Publik & Pratinjau)
+ * TSD §4.10 & §6 poin 7
  */
 export async function getArticleBySlugForPublic(slug: string) {
     return prisma.blogArticle.findFirst({
-        where: { slug, status: "published" },
+        where: { slug },
         include: {
             author: { select: { id: true, name: true, avatarUrl: true, tutorProfile: { select: { bio: true } } } },
             coAuthors: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },

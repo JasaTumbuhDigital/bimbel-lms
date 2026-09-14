@@ -124,10 +124,10 @@ export default function ArticleEditorForm({
             {/* Banner Rejection */}
             <ArticleReviewBanner status={article.status} reviewNote={article.reviewNote} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Content Area */}
-                <div className="lg:col-span-2 space-y-6">
-                    <form action={contentAction} className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
+            <div className="space-y-8">
+                {/* Main Content Area — Full Width */}
+                <div className="space-y-6">
+                    <form action={contentAction} className="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 space-y-6">
                         <div className="flex items-center justify-between border-b pb-4">
                             <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 Konten Artikel
@@ -191,14 +191,12 @@ export default function ArticleEditorForm({
                         {/* TipTap Editor */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Isi Konten</label>
-                            <div className="border border-slate-300 rounded-md overflow-hidden min-h-87.5">
-                                <TipTapEditor
-                                    articleId={article.id}
-                                    content={contentJson}
-                                    onChange={(json) => setContentJson(json)}
-                                    editable={canEditContent}
-                                />
-                            </div>
+                            <TipTapEditor
+                                articleId={article.id}
+                                content={contentJson}
+                                onChange={(json) => setContentJson(json)}
+                                editable={canEditContent}
+                            />
                         </div>
 
                         {/* Ringkasan (Excerpt) */}
@@ -271,20 +269,29 @@ export default function ArticleEditorForm({
                     )}
                 </div>
 
-                {/* Sidebar Metadata, SEO & Co-Author */}
-                <div className="space-y-6">
-                    <ArticleMetadataSidebar
-                        article={article}
-                        canEditMetadata={canEditMetadata}
-                    />
+                {/* Section Pengaturan Tambahan: SEO & Kolaborasi */}
+                <div className="pt-6 border-t border-slate-200 space-y-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-800">Pengaturan Tambahan & Kolaborasi</h3>
+                        <p className="text-xs text-slate-500">
+                            Konfigurasi metadata SEO untuk mesin pencari & media sosial, serta manajemen tim penulis pendamping.
+                        </p>
+                    </div>
 
-                    <CoAuthorManager
-                        articleId={article.id}
-                        mainAuthor={article.author || { id: article.authorId, name: "Penulis Utama" }}
-                        coAuthors={article.coAuthors || []}
-                        availableTutors={availableTutors}
-                        canManage={canEditMetadata}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <ArticleMetadataSidebar
+                            article={article}
+                            canEditMetadata={canEditMetadata}
+                        />
+
+                        <CoAuthorManager
+                            articleId={article.id}
+                            mainAuthor={article.author || { id: article.authorId, name: "Penulis Utama" }}
+                            coAuthors={article.coAuthors || []}
+                            availableTutors={availableTutors}
+                            canManage={canEditMetadata}
+                        />
+                    </div>
                 </div>
             </div>
         </div>
