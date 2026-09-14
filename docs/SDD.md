@@ -1,11 +1,13 @@
 # Software Design Document (SDD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 1.5
+**Versi:** 1.6
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4)
+**Terkait dokumen:** PRD.md (v2.7)
 **Cakupan dokumen:** Fokus desain **Tier 1 (Base MVP)**. Tier 2 dibahas sebagai *extension notes* di tiap section relevan (bukan didesain detail) — akan didetailkan ulang sebagai revisi SDD terpisah saat Tier 2 mulai dikerjakan, sesuai fase di Implementation Plan.
 
+> **Ringkasan perubahan v1.6:** `CourseCategory` ditambahkan (TSD-Course-Content.md v1.7 A9) — kategori program untuk course, independen dari `ClassLevel`. Dibutuhkan untuk filter kategori di Landing Page (TSD-Landing-Page.md v1.0, baru).
+>
 > **Ringkasan perubahan v1.5:** Perombakan sisi tutor & course — pindah tingkatan siswa kembali murni hak admin (revert), Course Detail jadi 1 komponen shared admin/tutor dengan mode edit/preview + daftar siswa enrolled & reviews per-course. Detail lengkap: TSD-Course-Content.md v1.6, TSD-Auth-ClassLevel.md v1.2, TSD-Tutor-Dashboard.md v1.1.
 >
 > **Ringkasan perubahan v1.4:** `must_change_password` dipindah dari `student_profiles` ke `users` (berlaku semua role) — konsekuensi dari `createStudentAccount` yang digeneralisasi jadi `createUserAccount` (role: student/tutor/admin) di TSD-Auth-Account-Management.md v1.1. Detail lengkap & alasan: TSD-Auth-Account-Management.md v1.1 §3.1, TSD-Admin-Dashboard.md v1.1.
@@ -128,6 +130,8 @@ erDiagram
     CLASS_LEVELS ||--o{ COURSE_CLASS_LEVELS : "linked via"
     COURSES ||--o{ COURSE_CLASS_LEVELS : "linked via"
 
+    COURSE_CATEGORIES ||--o{ COURSES : "kategori program (v1.7, independen dari ClassLevel)"
+
     TUTOR_PROFILES ||--o{ COURSE_TUTORS : "assigned via"
     COURSES ||--o{ COURSE_TUTORS : "assigned via"
 
@@ -199,9 +203,16 @@ erDiagram
         string description
         string thumbnail_url
         boolean visible_to_all_levels "default false"
+        uuid category_id FK "v1.7 — kategori program, nullable"
         uuid created_by FK "admin/tutor pembuat"
         boolean is_published
         timestamp created_at
+    }
+
+    COURSE_CATEGORIES {
+        uuid id PK
+        string name "unique"
+        string slug "unique"
     }
 
     COURSE_CLASS_LEVELS {

@@ -1,11 +1,13 @@
 # Technical Spec Document (TSD)
 ## Fitur: Course & Content Module
 
-**Versi:** 1.6
+**Versi:** 1.7
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.4) · SDD.md (v1.5) · Implementation-Plan.md (v2.9, Fase 2) · TSD-Auth-ClassLevel.md (v1.2, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency dua arah — lihat A7) · TSD-Tutor-Dashboard.md (v1.1, dependency erat)
+**Terkait dokumen:** PRD.md (v2.7, direvisi bersamaan) · SDD.md (v1.6) · Implementation-Plan.md (v2.12, Fase 2) · TSD-Auth-ClassLevel.md (v1.2, dependency) · TSD-Quiz.md (v3.0, dependency ringan satu arah) · TSD-Student-Dashboard.md (v1.0, dependency dua arah) · TSD-Tutor-Dashboard.md (v1.1, dependency erat) · TSD-Landing-Page.md (v1.0, dependency baru — konsumen `getCourseListForPublicLanding`)
 **Scope Implementation Plan:** Fase 2 (Modul Kursus & Materi)
 
+> **Ringkasan perubahan v1.7:** Ditambahkan `CourseCategory` (A9) — sumbu klasifikasi baru untuk course (kategori program, mis. "TOEFL Prep"/"IELTS Prep"), independen dari `ClassLevel` (yang tetap murni syarat akses). Dibutuhkan untuk filter kategori di listing course landing page (TSD-Landing-Page.md).
+>
 > **Ringkasan perubahan v1.6 (perombakan besar sisi tutor):** Halaman `/tutor/courses` (scoped, editable) dan `/tutor/explore` (read-only, yang sebenarnya belum pernah didetailkan di dokumen manapun) **digabung jadi satu halaman** dengan 2 tab: "Kursus Saya" & "Kursus Lain" (§8.5). Course Detail sekarang 1 komponen yang sama untuk admin & tutor, mode edit/preview mengikuti hak akses (§8.2). Ditambahkan: section **siswa enrolled** per course (khusus yang punya akses edit, §5.5) dan section **reviews** (reuse `getReviewsForCourse` dari TSD-Student-Dashboard, tampil untuk semua, §5.6). Lihat A5-A8 di §1.4.
 >
 > **Ringkasan perubahan v1.5:** `enrollInCourse` (§5.2b) dapat 1 langkah tambahan kecil — bersihkan `wishlists` untuk course yang baru di-enroll (lihat TSD-Student-Dashboard.md D4, Fase 4). Tidak ada perubahan lain.
@@ -66,6 +68,13 @@ Tutor juga bisa **langsung membuat course baru** dari halaman ini (tombol "+ Bua
 
 **A8 — Tutor Utama vs Co-Tutor TETAP tidak dibedakan untuk hak edit (tidak berubah dari v1.0):** Ditegaskan lagi di sini karena sempat jadi pertanyaan terpisah — permission `canManageCourse` (§6.1) memang sengaja tidak membedakan keduanya (siapa pun anggota `course_tutors` boleh edit modul/materi), konsisten dengan pola yang sudah ada sejak awal.
 
+**A9 — `CourseCategory` ditambahkan sebagai sumbu klasifikasi BARU, independen dari `ClassLevel` (v1.7):**
+Selama ini course cuma punya 1 sumbu klasifikasi: `ClassLevel` (tingkatan siswa, buat filter akses). Ternyata dibutuhkan sumbu kedua yang beda konsepnya — **kategori program** (mis. "TOEFL Prep", "IELTS Prep", "Basic English" untuk bimbel bahasa; atau "SD"/"SMP"/"SMA" untuk bimbel umum yang sifatnya program, bukan syarat akses). Perbedaannya dengan `ClassLevel`:
+- `ClassLevel` → **syarat akses**: menentukan siswa mana yang *boleh lihat/enroll* course ini (many-to-many lewat `course_class_levels`, dipakai `getAccessibleCourseFilter`)
+- `CourseCategory` → **label deskriptif untuk filter/browsing** di landing page & listing (single-select, **tidak mempengaruhi akses sama sekali**) — murni buat pengunjung/siswa nyari "saya mau kategori TOEFL Prep", terlepas dari tingkatan siswanya
+
+**Pola desainnya disamakan persis dengan `BlogCategory`** (TSD-Blog-Article.md A2): single-select per course, dikurasi **admin only** (CRUD terpisah, §4.7 baru), `onDelete: SetNull` di FK (hapus kategori tidak menghapus course, cuma lepas labelnya — sama alasan seperti A5 dan A5-nya Blog). Tidak multi-select untuk Tier 1 — kalau nanti butuh 1 course di beberapa kategori sekaligus, upgrade ke many-to-many (pola sama seperti `BlogArticleTag`) tanpa migrasi drastis.
+
 ---
 
 ## 2. Data Model
@@ -79,18 +88,31 @@ model Course {
   description        String?
   thumbnailUrl       String?  @map("thumbnail_url")
   visibleToAllLevels Boolean  @default(false) @map("visible_to_all_levels")
+  categoryId         String?  @map("category_id") // v1.7 — kategori program (beda dari ClassLevel/tingkatan), lihat A9
   createdBy          String   @map("created_by") // users.id — admin atau tutor pembuat
   isPublished        Boolean  @default(false) @map("is_published")
   isArchived         Boolean  @default(false) @map("is_archived")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
+  category     CourseCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   modules      Module[]
   classLevels  CourseClassLevel[]
   tutors       CourseTutor[]
   enrollments  Enrollment[]
 
   @@map("courses")
+}
+
+// v1.7 — kategori PROGRAM (mis. "TOEFL Prep", "IELTS Prep", "Basic English"), independen dari ClassLevel (tingkatan siswa)
+model CourseCategory {
+  id   String @id @default(uuid())
+  name String @unique
+  slug String @unique
+
+  courses Course[]
+
+  @@map("course_categories")
 }
 
 model CourseClassLevel {
@@ -260,6 +282,16 @@ USING (
 );
 ```
 
+### 3.2b Tabel `course_categories` (v1.7, A9)
+```sql
+-- SELECT: semua orang (termasuk anonymous) — dibutuhkan untuk filter di landing page publik
+CREATE POLICY course_categories_select ON course_categories FOR SELECT USING (true);
+
+-- WRITE: admin only (sama pola seperti blog_categories, ClassLevel)
+CREATE POLICY course_categories_write ON course_categories FOR ALL
+USING (EXISTS (SELECT 1 FROM users u WHERE u.auth_id = auth.uid() AND u.role = 'admin'));
+```
+
 ### 3.3 Tabel `modules` & `lessons`
 ```sql
 -- SELECT: ikut akses parent course (siswa hanya lihat jika course accessible, tutor jika course miliknya, admin semua)
@@ -326,6 +358,7 @@ const createCourseSchema = z.object({
   title: z.string().min(3).max(150),
   description: z.string().max(1000).optional(),
   thumbnailUrl: z.string().optional(), // diisi dari hasil upload thumbnail ke Storage, bukan diketik manual
+  categoryId: z.string().uuid().optional(), // v1.7, A9 — opsional, boleh kosong ("Tanpa Kategori")
 });
 ```
 
@@ -415,6 +448,12 @@ const assignClassLevelsSchema = z.object({
 3. Kursus otomatis hilang dari semua listing (query listing selalu filter `isArchived = false`, lihat §5)
 4. Relasi seperti `lesson_progress` dan `enrollments` tetap utuh, sehingga riwayat siswa tidak rusak.
 
+### 4.7 `createCourseCategory` / `updateCourseCategory` / `deleteCourseCategory` (v1.7, A9)
+
+**FR terkait:** FR-34 (filter kategori di landing page)
+
+Admin only. CRUD sederhana — `name` + `slug` (auto-generate dari `name`, cek uniqueness). `deleteCourseCategory` **tidak butuh guard khusus** — `onDelete: SetNull` di skema (§2.1) menangani course yang masih pakai kategori itu, sama pola persis seperti `deleteCategory` di TSD-Blog-Article.md.
+
 ---
 
 ## 5. Server Actions/Queries — Listing & Akses per Role
@@ -422,7 +461,7 @@ const assignClassLevelsSchema = z.object({
 ### 5.1 `getCourseListForStudent`
 
 ```ts
-async function getCourseListForStudent(studentProfileId: string) {
+async function getCourseListForStudent(studentProfileId: string, categoryId?: string) {
   const student = await prisma.studentProfile.findUniqueOrThrow({
     where: { id: studentProfileId },
     select: { classLevelId: true },
@@ -432,17 +471,20 @@ async function getCourseListForStudent(studentProfileId: string) {
     where: {
       isPublished: true,
       isArchived: false,
+      ...(categoryId ? { categoryId } : {}), // v1.7, A9 — filter kategori opsional
       OR: [
         { visibleToAllLevels: true },
         { classLevels: { some: { classLevelId: student.classLevelId } } },
         { enrollments: { some: { studentId: studentProfileId } } }, // grandfathering, lihat A2
       ],
     },
-    include: { modules: { select: { id: true } } }, // untuk hitung jumlah modul di card listing
+    include: { modules: { select: { id: true } }, category: true }, // untuk hitung jumlah modul & tampilkan badge kategori di card listing
   });
 }
 ```
 > Ini implementasi konkret dari helper `getAccessibleCourseFilter` yang didefinisikan di TSD-Auth-ClassLevel.md §5.4 — filter dasarnya sama, ditambah kondisi `enrollments` untuk mendukung A2 (grandfathering).
+>
+> **Untuk pengunjung anonymous (belum login)** — landing page **tidak** memanggil fungsi ini (fungsi ini butuh `studentProfileId`, tidak ada untuk anonymous). Ada query terpisah `getCourseListForPublicLanding` yang didefinisikan di **TSD-Landing-Page.md** — lebih sederhana (tidak perlu cek `ClassLevel`/enrollment, cukup `isPublished && !isArchived`), dan sengaja tidak digabung ke sini supaya fungsi ini tetap murni untuk konteks siswa yang sudah login.
 
 ### 5.2 `getCourseDetailForStudent` (Preview atau Full, Tergantung Status Enroll)
 
@@ -776,6 +818,7 @@ const markLessonSchema = z.object({
 
 **Kalau `hasEditAccess = true` (admin, atau tutor di `course_tutors` course ini):**
 - Form info dasar kursus (title, description, thumbnail) — editable
+- **Dropdown Kategori (v1.7, A9)** — single-select dari `course_categories`, boleh kosong ("Tanpa Kategori"). **Boleh diisi admin maupun tutor** (beda dari section tingkatan/tutor pengampu di bawah yang admin-only) — kategori program itu keputusan konten, bukan keputusan akses, jadi wajar tutor yang bikin course juga yang menentukan kategorinya
 - **Section tingkatan** (khusus `role === 'admin'` — tutor dengan `hasEditAccess = true` sekalipun **tetap tidak** melihat/mengedit section ini, sesuai FR-40 hak admin, tidak berubah dari sebelumnya): multi-select checkbox daftar `class_levels` + toggle terpisah "Berlaku untuk Semua Tingkatan"
 - **Section tutor pengampu** (khusus `role === 'admin'`, sama alasannya): multi-select tutor dari daftar `tutor_profiles`, dengan tag/chip yang bisa dihapus (unassign)
 - **Section modul & lesson** (admin & tutor dengan akses edit): drag-and-drop reorder, tombol tambah modul/lesson — form lesson punya pilihan tipe konten (Video atau Dokumen); jika Video, field URL YouTube; jika Dokumen, komponen upload file (memanggil `uploadDocument`, §6.3). Tiap modul juga punya slot **"Kelola Kuis Modul"** — detail builder sepenuhnya di TSD-Quiz.md
@@ -839,11 +882,14 @@ const markLessonSchema = z.object({
 | TSD-Quiz.md (v3.0, dependency ringan satu arah) | TSD-Quiz.md butuh model `Module`, `Course`, `Enrollment`, pola `canManageCourse` dari dokumen ini — tapi **tidak sebaliknya** |
 | TSD-Student-Dashboard.md (v1.0, dependency dua arah sejak v1.6/A7) | Dokumen ini **memanggil** `getReviewsForCourse` (§5.6) yang didefinisikan kanonik di sana — dependency baru yang sebelumnya cuma satu arah (TSD-Student-Dashboard yang butuh dari sini, bukan sebaliknya) |
 | TSD-Tutor-Dashboard.md (v1.1, dependency erat) | Halaman `/tutor/courses` (§8.5) & Course Detail (§8.2) yang didetailkan di sini jadi tulang punggung utama dashboard tutor — TSD-Tutor-Dashboard.md v1.1 sekarang cuma menyisakan ringkasan angka & aggregate "Siswa Saya" lintas course, bukan detail per-course lagi |
+| TSD-Landing-Page.md (v1.0, dependency baru sejak v1.7) | `CourseCategory` (A9) & `getCourseListForStudent` dengan filter `categoryId` dipakai sebagai basis `getCourseListForPublicLanding` di sana |
 
 ---
 
 ## 11. Acceptance Criteria
 
+- [ ] Admin bisa CRUD `CourseCategory`; hapus kategori tidak menghapus course, cuma melepas labelnya (A9)
+- [ ] Admin & tutor (dengan akses edit) bisa pilih kategori course dari dropdown; filter kategori di listing course berfungsi
 - [ ] Tutor membuat kursus baru → otomatis jadi pengampu tanpa perlu admin assign manual
 - [ ] Admin bisa assign/unassign banyak tutor ke satu kursus, dan banyak tingkatan ke satu kursus (atau flag "semua tingkatan")
 - [ ] Kursus tidak bisa dipublish tanpa tingkatan/flag terisi, pesan error jelas

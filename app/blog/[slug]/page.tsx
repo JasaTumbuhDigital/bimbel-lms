@@ -187,7 +187,7 @@ export default async function BlogDetailPage({ params }: PageProps) {
 
                 {/* Konten Artikel Utama (TipTap rendered to HTML) */}
                 <div
-                    className="prose prose-slate max-w-none text-slate-800 leading-relaxed
+                    className="prose prose-slate max-w-none text-slate-800
                         prose-headings:font-bold prose-headings:text-slate-900
                         prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
                         prose-p:my-4 prose-p:leading-relaxed

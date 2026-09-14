@@ -1,11 +1,13 @@
 # Implementation Plan
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.11
+**Versi:** 2.12
 **Tanggal:** 2 September 2026
-**Terkait dokumen:** PRD.md (v2.6), SDD.md (v1.5)
+**Terkait dokumen:** PRD.md (v2.7), SDD.md (v1.6)
 **Target:** Codebase master Tier 1 (Base MVP) siap dijual & direplikasi ke klien pertama
 
+> **Ringkasan perubahan v2.12:** Landing Page (FR-34) didetailkan penuh sebagai TSD terpisah (TSD-Landing-Page.md v1.0) — 14 section, plus `CourseCategory` baru (TSD-Course-Content.md v1.7) untuk filter kategori program yang sebelumnya belum ada padanan skemanya.
+>
 > **Ringkasan perubahan v2.11:** Fase 6 (Blog) direvisi lagi — editor jadi WYSIWYG (TipTap, JSON storage), ditambah approval workflow (draft → pending review → published), hak co-author dipersempit ke isi konten saja. Detail: TSD-Blog-Article.md v2.0.
 >
 > **Ringkasan perubahan v2.10:** Fase 6 (Blog) dirombak dari rencana "MDX statis" jadi **DB-driven dengan builder** — kategori, tag, co-author, upload gambar, editor Markdown, SEO per artikel. Landing page (FR-34) tetap sengaja tidak didetailkan sebagai TSD (kerja desain/konten, bukan spek fitur).
@@ -178,11 +180,12 @@
 ---
 
 ### Fase 6 — Landing Page & Blog
-- [ ] Landing page: hero, statistik, listing kursus + filter kategori, testimoni — full config-driven (2-3 template contoh umum, sisanya custom by-request per klien saat replikasi — tidak perlu didetailkan sebagai TSD)
+- [ ] Landing page: 14 section didetailkan penuh di TSD-Landing-Page.md v1.0 (navbar, hero, statistik, cara kerja, program+filter kategori, tutor unggulan, partner, testimoni kurasi, blog terbaru, FAQ, CTA akhir, kontak, footer) — 2-3 template visual contoh umum, sisanya custom by-request per klien saat replikasi
+- [ ] `CourseCategory` baru (TSD-Course-Content.md v1.7) — sumbu klasifikasi program, independen dari `ClassLevel`
 - [ ] `next/image` + `generateMetadata` untuk SEO dasar
 - [ ] Blog/artikel — **DB-driven dengan builder WYSIWYG** (TipTap, bukan Markdown/MDX lagi, lihat TSD-Blog-Article.md v2.0): kategori (kurasi admin), tag (bebas), co-author dengan hak terbatas ke isi konten, **approval workflow** (draft → pending review → published), SEO metadata per artikel
 
-**Terkait:** FR-34, FR-35 · TSD-Blog-Article.md v2.0
+**Terkait:** FR-34, FR-35 · TSD-Landing-Page.md v1.0 · TSD-Blog-Article.md v2.0 · TSD-Course-Content.md v1.7 (CourseCategory)
 
 ---
 

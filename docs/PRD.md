@@ -1,11 +1,13 @@
 # Product Requirements Document (PRD)
 ## LMS Bimbel Template — [Nama Produk]
 
-**Versi:** 2.6
+**Versi:** 2.7
 **Tanggal:** 2 September 2026
 **Status:** Draft
 **Owner:** [Nama kamu]
 
+> **Ringkasan perubahan v2.7:** FR-34 (Landing Page) sekarang didetailkan penuh di TSD-Landing-Page.md — 14 section (navbar, hero, statistik, cara kerja, program, tutor unggulan, partner, testimoni, blog, FAQ, CTA, kontak, footer). "Filter kategori" di FR-34 sekarang jelas: `CourseCategory` baru (TSD-Course-Content.md v1.7 A9), independen dari `ClassLevel`.
+>
 > **Ringkasan perubahan v2.6:** FR-35 direvisi lagi — editor jadi WYSIWYG (bukan cuma "gambar embed" generik), ditambah approval workflow, dan hak co-author dipersempit jadi cuma isi konten (bukan ikut kategori/tag/SEO/status). FR-35b baru dicatat untuk kandidat Tier 2 (komentar, related articles, jadwal publish, dst). Lihat TSD-Blog-Article.md v2.0.
 >
 > **Ringkasan perubahan v2.5:** FR-35 diperluas — blog/artikel sekarang punya kategori (dikurasi admin), tag (bebas, siapa pun bisa buat), co-author, dan builder dengan gambar embed. Sebelumnya cuma disebut "SEO metadata dasar" tanpa detail struktur konten. Lihat TSD-Blog-Article.md.
@@ -233,7 +235,7 @@ Persona di bawah tetap relevan sebagai **pengguna akhir di dalam tiap instance k
 - **FR-33 (P1, T2):** Dashboard tutor harus menampilkan analytics siswa (progress rendah, rata-rata nilai per kelas).
 
 ### 5.11 Landing Page & Blog
-- **FR-34 (P0, T1):** Landing page harus menampilkan hero section, statistik institusi, listing kursus dengan filter kategori, dan testimoni — dengan branding (nama, logo, warna) yang mudah dikonfigurasi per klien (config-driven, bukan hardcoded).
+- **FR-34 (P0, T1):** Landing page harus menampilkan hero section, statistik institusi, listing kursus dengan filter kategori (`CourseCategory`, independen dari tingkatan — lihat TSD-Course-Content.md v1.7 A9) dan testimoni — dengan branding (nama, logo, warna) yang mudah dikonfigurasi per klien (config-driven, bukan hardcoded). Detail lengkap struktur section: TSD-Landing-Page.md.
 - **FR-35 (P0, T1):** Sistem harus punya halaman blog/artikel dengan kategori (genre/tema), tag, editor WYSIWYG dengan kemampuan menyisipkan gambar, approval workflow (draft → pending review → published), dan SEO metadata dasar per artikel (title, description, og-image). Admin bisa kelola & approve/publish semua artikel siapa pun; tutor (Author Utama) hanya bisa kelola & ajukan review artikelnya sendiri; co-author yang dibantu-tandai hanya berhak edit isi konten (judul/isi/excerpt/cover image), tidak berhak atas kategori/tag/SEO/status terbit/co-author lain.
 - **FR-35b (Kandidat Tier 2, belum diprioritaskan):** Komentar pembaca, artikel terkait otomatis, jadwal publish, read count/analytics per artikel, riwayat revisi, notifikasi WA/email artikel baru. Lihat TSD-Blog-Article.md §1.5 untuk detail & alasan penundaan masing-masing.
 
