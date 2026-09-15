@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import NextTopLoader from 'nextjs-toploader';
+import { institutionConfig } from "@/config/institution";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,9 +16,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
-  title: "Bimbel LMS",
-  description: "Platform Manajemen Belajar & Edukasi",
+  metadataBase: new URL(institutionConfig.url),
+  title: {
+    default: `${institutionConfig.name} - ${institutionConfig.tagline}`,
+    template: `%s | ${institutionConfig.name}`,
+  },
+  description: institutionConfig.description,
+  openGraph: {
+    siteName: institutionConfig.name,
+    locale: "id_ID",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

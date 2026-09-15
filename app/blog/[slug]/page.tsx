@@ -7,6 +7,8 @@ import { getPublicUrl } from "@/lib/supabase-storage";
 import { renderArticleContentToHtml } from "@/lib/blog/render-html";
 import { Calendar, User as UserIcon, Users, Tag as TagIcon, ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
+import { institutionConfig } from "@/config/institution";
+import ShareButton from "@/components/blog/ShareButton";
 
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -27,16 +29,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const title = article.seoTitle || article.title;
-    const description = article.seoDescription || article.excerpt || undefined;
-    const ogImage = article.seoImageUrl || (article.coverImageUrl ? getPublicUrl(article.coverImageUrl) : undefined);
+    const description = article.seoDescription || article.excerpt || institutionConfig.description;
+    const ogImage = article.seoImageUrl
+        ? (article.seoImageUrl.startsWith("http") ? article.seoImageUrl : getPublicUrl(article.seoImageUrl))
+        : (article.coverImageUrl ? getPublicUrl(article.coverImageUrl) : undefined);
 
     return {
-        title: `${title} | Blog Bimbel`,
+        title,
         description,
+        alternates: {
+            canonical: `/blog/${article.slug}`,
+        },
         openGraph: {
             title,
             description,
-            images: ogImage ? [{ url: ogImage }] : undefined,
+            type: "article",
+            publishedTime: article.publishedAt ? new Date(article.publishedAt).toISOString() : undefined,
+            modifiedTime: new Date(article.updatedAt).toISOString(),
+            authors: [article.author.name, ...(article.coAuthors?.map((ca) => ca.user.name) || [])],
+            tags: article.tags?.map((t) => t.tag.name),
+            images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: title }] : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title,
+            description,
+            images: ogImage ? [ogImage] : undefined,
         },
     };
 }
@@ -70,6 +88,10 @@ export default async function BlogDetailPage({ params }: PageProps) {
 
     const htmlContent = renderArticleContentToHtml(article.content);
     const fullCoverUrl = getPublicUrl(article.coverImageUrl || null);
+    const resolvedOgImage = article.seoImageUrl
+        ? (article.seoImageUrl.startsWith("http") ? article.seoImageUrl : getPublicUrl(article.seoImageUrl))
+        : fullCoverUrl;
+
     const dateFormatted = article.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString("id-ID", {
             day: "numeric",
@@ -82,8 +104,40 @@ export default async function BlogDetailPage({ params }: PageProps) {
             year: "numeric",
         });
 
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        headline: article.title,
+        description: article.excerpt || institutionConfig.description,
+        image: resolvedOgImage ? [resolvedOgImage] : undefined,
+        datePublished: article.publishedAt ? new Date(article.publishedAt).toISOString() : undefined,
+        dateModified: new Date(article.updatedAt).toISOString(),
+        author: {
+            "@type": "Person",
+            name: article.author.name,
+        },
+        publisher: {
+            "@type": "Organization",
+            name: institutionConfig.name,
+            logo: {
+                "@type": "ImageObject",
+                url: `${institutionConfig.url}${institutionConfig.logo.src}`,
+            },
+        },
+        mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": `${institutionConfig.url}/blog/${article.slug}`,
+        },
+    };
+
     return (
         <main className="min-h-screen bg-white text-slate-900 pb-20">
+            {/* JSON-LD Structured Data untuk Google Rich Snippets */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+
             {/* Banner Preview jika artikel belum dipublikasikan */}
             {isPreview && (
                 <div className="bg-amber-500 text-white px-4 py-2.5 text-center text-xs sm:text-sm font-semibold tracking-wide shadow-xs sticky top-0 z-50">
@@ -163,10 +217,13 @@ export default async function BlogDetailPage({ params }: PageProps) {
                             </div>
                         )}
 
-                        {/* Tanggal */}
-                        <div className="flex items-center gap-1 text-slate-400 ml-auto text-xs">
-                            <Calendar className="w-3.5 h-3.5" />
-                            <span>{dateFormatted}</span>
+                        {/* Tanggal & Tombol Bagikan */}
+                        <div className="flex items-center gap-3 ml-auto">
+                            <div className="flex items-center gap-1 text-slate-400 text-xs">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>{dateFormatted}</span>
+                            </div>
+                            <ShareButton title={article.title} slug={article.slug} variant="default" />
                         </div>
                     </div>
                 </header>
@@ -197,6 +254,15 @@ export default async function BlogDetailPage({ params }: PageProps) {
                         prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-pre:rounded-lg"
                     dangerouslySetInnerHTML={{ __html: htmlContent }}
                 />
+
+                {/* Bagikan Artikel Bottom Card */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div>
+                        <p className="text-xs font-bold text-slate-900">Bagikan Wawasan Ini</p>
+                        <p className="text-[11px] text-slate-500">Bantu temanmu mendapatkan ilmu dan tips belajar yang bermanfaat.</p>
+                    </div>
+                    <ShareButton title={article.title} slug={article.slug} variant="default" />
+                </div>
 
                 {/* Footer Tags */}
                 {article.tags && article.tags.length > 0 && (

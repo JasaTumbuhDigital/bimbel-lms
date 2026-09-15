@@ -4,9 +4,19 @@ import ArticlePublicCard from "@/components/blog/ArticlePublicCard";
 import BlogFilterBar from "@/components/blog/BlogFilterBar";
 import { BookOpen } from "lucide-react";
 
-export const metadata = {
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
     title: "Blog & Wawasan Belajar",
     description: "Kumpulan artikel edukatif, materi pendalaman, dan tips belajar untuk siswa.",
+    alternates: {
+        canonical: "/blog",
+    },
+    openGraph: {
+        title: "Blog & Wawasan Belajar",
+        description: "Kumpulan artikel edukatif, materi pendalaman, dan tips belajar untuk siswa.",
+        type: "website",
+    },
 };
 
 interface BlogPageProps {

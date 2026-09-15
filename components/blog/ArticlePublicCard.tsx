@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getPublicUrl } from "@/lib/supabase-storage";
 import { Calendar, User as UserIcon, Tag as TagIcon } from "lucide-react";
+import ShareButton from "@/components/blog/ShareButton";
 
 interface ArticlePublicCardProps {
     article: {
@@ -105,16 +106,19 @@ export default function ArticlePublicCard({ article }: ArticlePublicCardProps) {
                                     <UserIcon className="w-3 h-3 text-slate-600" />
                                 </div>
                             )}
-                            <span className="font-medium text-slate-700 truncate max-w-30">
+                            <span className="font-medium text-slate-700 truncate max-w-24 sm:max-w-28">
                                 {article.author.name}
                             </span>
                         </div>
-                        {dateFormatted && (
-                            <div className="flex items-center gap-1 text-slate-400">
-                                <Calendar className="w-3 h-3" />
-                                <span>{dateFormatted}</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                            {dateFormatted && (
+                                <div className="flex items-center gap-1 text-slate-400">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{dateFormatted}</span>
+                                </div>
+                            )}
+                            <ShareButton title={article.title} slug={article.slug} variant="compact" />
+                        </div>
                     </div>
                 </div>
             </div>

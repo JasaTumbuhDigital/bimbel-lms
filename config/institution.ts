@@ -1,6 +1,7 @@
 export interface InstitutionConfig {
     name: string;
     shortName: string;
+    url: string;
     tagline: string;
     description: string;
     logo: {
@@ -27,6 +28,7 @@ export interface InstitutionConfig {
 export const institutionConfig: InstitutionConfig = {
     name: "Zest Collage",
     shortName: "Zest",
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     tagline: "Belajar Ser, Gapai Mimpi Besarmu",
     description: "Bersama ZEST, belajar nyaman dengan metode yang menyenangkan. Kami bantu kamu tumbuh percaya diri, berkembang dan melangkah pasti menuju mimpi besarmu.",
     logo: {
